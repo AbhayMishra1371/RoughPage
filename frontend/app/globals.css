@@ -1,0 +1,143 @@
+@import "tailwindcss";
+
+:root {
+  --bg-paper: #faf6ee;
+  --bg-paper-darker: #f3ece0;
+  --bg-card: #ffffff;
+  --ink: #111827;
+  --ink-soft: #374151;
+  --ink-faded: #6b7280;
+  --coral: #e64a3b;
+  --coral-light: #fdf2f0;
+  --turquoise: #0d9488;
+  --turquoise-light: #f0fdfa;
+  --sticky-yellow: #fef9c3;
+  --sticky-yellow-border: #fef08a;
+  --rule-blue: #cbd5e1;
+  --rule-red: #f87171;
+  --font-serif: var(--font-serif-loaded), "Playfair Display", Georgia, serif;
+  --font-sans: var(--font-sans-loaded), Inter, sans-serif;
+  --font-hand: var(--font-hand-loaded), Kalam, cursive;
+  --font-mono: var(--font-mono-loaded), "JetBrains Mono", monospace;
+}
+
+body {
+  background-color: var(--bg-paper);
+  color: var(--ink);
+  font-family: var(--font-sans);
+  overflow-x: hidden;
+  background-image: 
+    radial-gradient(#d1c7b7 0.75px, transparent 0.75px),
+    radial-gradient(#d1c7b7 0.75px, var(--bg-paper) 0.75px);
+  background-size: 30px 30px;
+  background-position: 0 0, 15px 15px;
+}
+
+/* Notebook Ruled Line Background */
+.notebook-ruled {
+  background-color: #ffffff;
+  background-image: 
+    linear-gradient(90deg, transparent 49px, var(--rule-red) 49px, var(--rule-red) 51px, transparent 51px),
+    linear-gradient(var(--rule-blue) 1px, transparent 1px);
+  background-size: 100% 100%, 100% 28px;
+  background-position: 0 0, 0 14px;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.08), 0 8px 10px -6px rgba(0, 0, 0, 0.05);
+}
+
+/* Paper Texture Card */
+.paper-card {
+  background-color: #ffffff;
+  border: 1px solid rgba(17, 24, 39, 0.12);
+  box-shadow: 2px 4px 12px rgba(0, 0, 0, 0.05);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.paper-card-taped {
+  position: relative;
+}
+.paper-card-taped::before {
+  content: "";
+  position: absolute;
+  top: -12px;
+  left: 50%;
+  transform: translateX(-50%) rotate(-2deg);
+  width: 70px;
+  height: 24px;
+  background: rgba(254, 240, 138, 0.75);
+  border: 1px solid rgba(234, 179, 8, 0.3);
+  box-shadow: 0 2px 4px rgba(0,0,0,0.04);
+  z-index: 10;
+}
+
+/* Sticky Note Style */
+.sticky-note-yellow {
+  background-color: var(--sticky-yellow);
+  border: 1px solid var(--sticky-yellow-border);
+  box-shadow: 3px 5px 10px rgba(0,0,0,0.06);
+  transform: rotate(-1.5deg);
+}
+
+.sticky-note-coral {
+  background-color: #ffe4e1;
+  border: 1px solid #fca5a5;
+  box-shadow: 3px 5px 10px rgba(0,0,0,0.06);
+  transform: rotate(1.2deg);
+}
+
+.sticky-note-turquoise {
+  background-color: #ccfbf1;
+  border: 1px solid #99f6e4;
+  box-shadow: 3px 5px 10px rgba(0,0,0,0.06);
+  transform: rotate(-0.8deg);
+}
+
+/* Custom Highlight Stroke */
+.highlight-yellow {
+  background: linear-gradient(100deg, rgba(254, 240, 138, 0.8) 0%, rgba(254, 240, 138, 0.95) 100%);
+  padding: 0 4px;
+  border-radius: 2px;
+}
+
+.highlight-coral {
+  background: linear-gradient(100deg, rgba(254, 202, 202, 0.7) 0%, rgba(254, 202, 202, 0.9) 100%);
+  padding: 0 4px;
+  border-radius: 2px;
+}
+
+.highlight-turquoise {
+  background: linear-gradient(100deg, rgba(153, 246, 228, 0.7) 0%, rgba(153, 246, 228, 0.9) 100%);
+  padding: 0 4px;
+  border-radius: 2px;
+}
+
+/* Custom Scrollbars */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: var(--bg-paper-darker);
+}
+::-webkit-scrollbar-thumb {
+  background: #d1c7b7;
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #a89c88;
+}
+
+/* Smooth Rotations & Animations */
+.tilt-left { transform: rotate(-1.5deg); }
+.tilt-right { transform: rotate(1.5deg); }
+
+@keyframes strokeDraw {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+.animate-draw {
+  stroke-dasharray: 1000;
+  stroke-dashoffset: 1000;
+  animation: strokeDraw 1.5s ease-out forwards;
+}

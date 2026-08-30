@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <!-- A sheet of ruled paper with the red margin rule. Same palette as
+       lib/geometry.ts. Exists mainly so the browser stops asking for
+       /favicon.ico, which showed up as an anonymous 404 in every render log. -->
+  <rect width="32" height="32" rx="4" fill="#fdfaf2" />
+  <g stroke="#a8c4e0" stroke-width="1.4">
+    <path d="M4 11h24M4 17h24M4 23h24" />
+  </g>
+  <path d="M9 3v26" stroke="#d94a3d" stroke-width="1.4" />
+  <path d="M12 20c3-6 6 2 9-4" stroke="#1c2b6b" stroke-width="2" fill="none"
+        stroke-linecap="round" />
+</svg>

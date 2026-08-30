@@ -1,0 +1,254 @@
+{
+  "_comment": "Coverage fixture: every element type the schema defines, including the one that is still a placeholder (screenshot). Deliberately exercises the awkward cases rather than the happy path — a comparison and a code_block both long enough to force a mid-element page split, a diagram whose `edges` names a node absent from `nodes` (which must be dropped with a console warning, not crash), edge_labels that must stay aligned with the surviving edges after that drop, a mind_map with uneven sub_branches, a flowchart whose steps contain the arrow character Kalam has no glyph for, and all three importance levels on the new types. sample-notebook.json stays the realistic-looking document; this one is the matrix.",
+  "metadata": {
+    "title": "Sequence Models",
+    "subject": "Deep Learning",
+    "source_url": "https://youtube.com/watch?v=coverage",
+    "video_id": "coverage",
+    "style": "detailed",
+    "total_pages": 4,
+    "created_at": null
+  },
+  "pages": [
+    {
+      "page_number": 1,
+      "topic": "Encoder-Decoder Models",
+      "elements": [
+        {
+          "type": "heading",
+          "text": "Encoder-Decoder Models",
+          "level": 1,
+          "importance": "high"
+        },
+        {
+          "type": "paragraph",
+          "importance": "medium",
+          "text": "An encoder-decoder model splits the problem in two. The encoder reads the whole input sequence and compresses what it understood into a fixed representation; the decoder reads that representation and writes the output sequence one token at a time. Nothing forces the two halves to share an architecture, which is why the pattern outlived the recurrent networks it was invented for."
+        },
+        {
+          "type": "definition",
+          "term": "Latent vector",
+          "meaning": "The fixed-size representation the encoder hands to the decoder — everything the model managed to keep about the input.",
+          "example": "A 512-dimensional vector standing in for a whole sentence.",
+          "importance": "high"
+        },
+        {
+          "type": "diagram",
+          "title": "How the halves connect",
+          "importance": "medium",
+          "nodes": ["Input tokens", "Encoder", "Latent vector", "Attention", "Decoder", "Output tokens"],
+          "edges": [
+            ["Input tokens", "Encoder"],
+            ["Encoder", "Latent vector"],
+            ["Encoder", "Attention"],
+            ["Latent vector", "Decoder"],
+            ["Attention", "Decoder"],
+            ["Decoder", "Output tokens"],
+            ["Output tokens", "Beam search"]
+          ],
+          "edge_labels": ["embed", "compress", "keys + values", "context", "weights", "logits", "this edge names a node that does not exist"]
+        },
+        {
+          "type": "sticky_formula",
+          "label": "Attention",
+          "formula": "\\text{softmax}\\left(\\frac{QK^T}{\\sqrt{d_k}}\\right)V",
+          "is_latex": true,
+          "importance": "high"
+        },
+        {
+          "type": "summary",
+          "importance": "medium",
+          "points": [
+            "The encoder compresses, the decoder generates",
+            "Attention lets the decoder look back at every input position",
+            "The two halves need not share an architecture"
+          ]
+        }
+      ]
+    },
+    {
+      "page_number": 2,
+      "topic": "Training It",
+      "elements": [
+        {
+          "type": "heading",
+          "text": "Training It",
+          "level": 1,
+          "importance": "high"
+        },
+        {
+          "type": "comparison",
+          "title": "Teacher forcing vs free running",
+          "left_label": "Teacher forcing",
+          "right_label": "Free running",
+          "importance": "high",
+          "rows": [
+            ["Decoder sees the true previous token", "Decoder sees its own last prediction"],
+            ["Trains fast, converges early", "Trains slowly, often unstably"],
+            ["Can be fully parallelised over time", "Strictly sequential"],
+            ["Mismatched with inference", "Matches inference exactly"],
+            ["Suffers exposure bias", "No exposure bias"],
+            ["Standard for pre-training", "Used for fine-tuning and RL"],
+            ["Loss is optimistic", "Loss reflects real generation"],
+            ["Cheap to implement", "Needs a sampling loop"]
+          ]
+        },
+        {
+          "type": "code_block",
+          "language": "python",
+          "importance": "medium",
+          "code": "import torch\nimport torch.nn as nn\n\n\nclass Decoder(nn.Module):\n    def __init__(self, vocab, hidden):\n        super().__init__()\n        self.embed = nn.Embedding(vocab, hidden)\n        self.rnn = nn.GRU(hidden, hidden, batch_first=True)\n        self.out = nn.Linear(hidden, vocab)\n\n    def forward(self, tokens, state):\n        # tokens: (batch, time) of the PREVIOUS true tokens.\n        x = self.embed(tokens)\n        h, state = self.rnn(x, state)\n        return self.out(h), state\n\n\ndef train_step(model, batch, opt, pad_id):\n    loss_fn = nn.CrossEntropyLoss(ignore_index=pad_id)\n    logits, _ = model(batch.inputs, batch.state)\n    loss = loss_fn(\n        logits.reshape(-1, logits.size(-1)),\n        batch.targets.reshape(-1),\n    )\n    opt.zero_grad()\n    loss.backward()\n    nn.utils.clip_grad_norm_(model.parameters(), 1.0)\n    opt.step()\n    return loss.item()"
+        },
+        {
+          "type": "important_note",
+          "text": "Clip the gradients. Recurrent decoders explode without it, and the failure looks like a bad learning rate for a long time before you find it.",
+          "importance": "high"
+        },
+        {
+          "type": "sticky_formula",
+          "label": "Training objective",
+          "formula": "\\mathcal{L} = -\\sum_{t=1}^{T} \\log p_\\theta(y_t \\mid y_{<t}, x)",
+          "is_latex": false,
+          "importance": "high"
+        },
+        {
+          "type": "sticky_formula",
+          "label": "Rule of thumb",
+          "formula": "clip to norm 1.0",
+          "is_latex": false,
+          "importance": "medium"
+        },
+        {
+          "type": "example",
+          "context": "Why exposure bias matters in practice",
+          "walkthrough": "A model trained only with teacher forcing has never once seen its own mistake as input. The first wrong token at inference puts it in a state it was never trained on, and the rest of the sentence drifts.",
+          "importance": "medium"
+        },
+        {
+          "type": "summary",
+          "importance": "medium",
+          "points": [
+            "Teacher forcing is fast but optimistic",
+            "Clip gradients or the decoder explodes",
+            "Exposure bias is the price of the fast path"
+          ]
+        }
+      ]
+    },
+    {
+      "page_number": 3,
+      "topic": "How We Got Here",
+      "elements": [
+        {
+          "type": "heading",
+          "text": "How We Got Here",
+          "level": 1,
+          "importance": "high"
+        },
+        {
+          "type": "timeline",
+          "title": "Sequence models, roughly",
+          "importance": "medium",
+          "events": [
+            { "label": "1997", "description": "LSTM — gates make long-range gradients survive." },
+            { "label": "2014", "description": "Sequence-to-sequence learning; the encoder-decoder split." },
+            { "label": "2015", "description": "Attention, so the decoder stops relying on one vector." },
+            { "label": "2017", "description": "Transformers drop recurrence entirely." },
+            { "label": "2018", "description": "Pre-train then fine-tune becomes the default recipe." },
+            { "label": "2020", "description": "Scaling laws turn architecture choices into budget choices." }
+          ]
+        },
+        {
+          "type": "mind_map",
+          "importance": "medium",
+          "center": "Ways to fix long-range memory",
+          "branches": ["Gating", "Attention", "Convolution", "State space"],
+          "sub_branches": {
+            "Gating": ["LSTM", "GRU"],
+            "Attention": ["additive", "dot-product", "multi-head"],
+            "State space": ["S4"]
+          }
+        },
+        {
+          "type": "screenshot",
+          "timestamp_seconds": 1412,
+          "caption": "The lecturer's whiteboard sketch of the attention matrix",
+          "importance": "medium"
+        },
+        {
+          "type": "summary",
+          "importance": "low",
+          "points": [
+            "Every fix is about shortening the path a gradient travels",
+            "Attention won because it parallelises",
+            "Recurrence was the constraint, not the goal"
+          ]
+        }
+      ]
+    },
+    {
+      "page_number": 4,
+      "topic": "Greedy Decoding",
+      "elements": [
+        {
+          "type": "heading",
+          "text": "Greedy Decoding",
+          "level": 1,
+          "importance": "high"
+        },
+        {
+          "type": "flowchart",
+          "title": "One decoding step",
+          "importance": "medium",
+          "steps": [
+            "Start with the <bos> token",
+            "Run the decoder → logits over the vocabulary",
+            "Take argmax → the next token",
+            "If token == <eos> → stop",
+            "Append it to the output and feed it back",
+            "Repeat until <eos> or the length cap"
+          ]
+        },
+        {
+          "type": "bullet_list",
+          "title": "Why greedy is not enough",
+          "importance": "high",
+          "items": [
+            "A locally best token can strand the rest of the sentence",
+            "No way to recover from an early mistake",
+            "Beam search keeps k hypotheses instead of one",
+            "Sampling trades accuracy for variety"
+          ]
+        },
+        {
+          "type": "paragraph",
+          "importance": "low",
+          "text": "Beam search is the usual answer, and it is worth remembering that it is still an approximation — the true argmax over whole sequences is intractable, so every decoder in production is making a guess about which partial guesses to keep."
+        },
+        {
+          "type": "sticky_formula",
+          "label": "Beam score",
+          "formula": "$$s(y) = \\frac{1}{|y|^{\\alpha}} \\sum_{t=1}^{|y|} \\log P(y_t \\mid y_{1:t-1}, x) + \\lambda \\cdot \\mathrm{cov}(y)$$",
+          "is_latex": true,
+          "importance": "medium"
+        },
+        {
+          "type": "sticky_formula",
+          "label": "Malformed on purpose",
+          "formula": "\\frac{1}{",
+          "is_latex": true,
+          "importance": "low"
+        },
+        {
+          "type": "summary",
+          "importance": "medium",
+          "points": [
+            "Greedy takes the best token, not the best sentence",
+            "Beam search keeps k candidates alive",
+            "Both are approximations of an intractable search"
+          ]
+        }
+      ]
+    }
+  ]
+}

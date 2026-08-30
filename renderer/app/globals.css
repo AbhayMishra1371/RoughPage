@@ -1,0 +1,302 @@
+/*
+ * globals.css
+ * ===========
+ * Paper, ruled lines, margin rule, ink defaults, print setup.
+ *
+ * Geometry values arrive as CSS custom properties set by <PaperPage> from
+ * lib/geometry.ts — they are NOT hard-coded here. geometry.ts stays the single
+ * source of truth, because the same numbers drive measurement, and a CSS value
+ * that drifts from the measured value is exactly how text ends up floating a
+ * few pixels off the ruled lines.
+ */
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  background: #6b7280;
+  /*
+   * Kalam and nothing else, deliberately.
+   *
+   * This used to read `'Kalam', 'Segoe Print', cursive`, and both of those
+   * fallbacks are resolved by the operating system — `cursive` is Segoe Print on
+   * Windows, Apple Chancery on macOS, and anybody's guess on a Linux CI box. Any
+   * character Kalam lacked was therefore drawn in a DIFFERENT font per machine,
+   * with different widths, which changes wrapping, which changes measured
+   * heights, which changes pagination. Two glyphs were doing exactly that (`→`
+   * and `★`); both are now drawn with rough.js instead.
+   *
+   * Naming no fallback does not stop Chrome falling back for a glyph Kalam does
+   * not have — nothing can — but it stops the stack from *silently endorsing* a
+   * machine-specific one, and it makes any remaining substitution show up in the
+   * PDF's font list where the render script can be pointed at it.
+   */
+  font-family: 'Kalam';
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ── The page ─────────────────────────────────────────────────────────────── */
+
+.paper {
+  position: relative;
+  width: var(--page-w);
+  height: var(--page-h);
+  overflow: hidden;
+  background-color: var(--paper);
+  /*
+   * Ruled lines. The gradient period is exactly --line-h and the whole pattern
+   * is offset by --pad-top, so the rules are in phase with the text grid by
+   * construction rather than by tuning.
+   */
+  background-image: repeating-linear-gradient(
+    to bottom,
+    transparent 0,
+    transparent calc(var(--line-h) - 1px),
+    var(--rule-blue) calc(var(--line-h) - 1px),
+    var(--rule-blue) var(--line-h)
+  );
+  background-position: 0 var(--pad-top);
+  background-repeat: repeat;
+  /* Chrome must not "optimise away" the background when printing. */
+  print-color-adjust: exact;
+  -webkit-print-color-adjust: exact;
+}
+
+/* Real notebooks have a double margin rule, not a single line. */
+.paper::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: var(--rule-x);
+  width: 2px;
+  background: var(--rule-red);
+  opacity: 0.75;
+}
+
+.paper::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: calc(var(--rule-x) + 4px);
+  width: 1px;
+  background: var(--rule-red);
+  opacity: 0.3;
+}
+
+/* Paper grain. ONE filter layer per page — never per element. */
+.grain {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.045;
+  mix-blend-mode: multiply;
+  z-index: 3;
+}
+
+/* The punched-hole shadow along the left edge, for a scanned-page feel. */
+.paper-shade {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 2;
+  background: linear-gradient(
+    to right,
+    rgba(90, 74, 42, 0.11) 0,
+    rgba(90, 74, 42, 0.02) 22px,
+    transparent 60px
+  );
+}
+
+/* ── Content box ──────────────────────────────────────────────────────────── */
+
+.page-content {
+  position: absolute;
+  top: var(--pad-top);
+  left: var(--margin-x);
+  width: var(--content-w);
+  height: var(--content-h);
+  z-index: 1;
+  /* line-height IS the ruled pitch — this is what puts baselines on the rules. */
+  line-height: var(--line-h);
+  font-size: 19px;
+  color: var(--ink);
+}
+
+/* Header strip above the first rule: topic on the left, page number right. */
+.page-header {
+  position: absolute;
+  top: calc(var(--pad-top) - var(--line-h) - 6px);
+  left: var(--margin-x);
+  width: var(--content-w);
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  font-size: 14px;
+  color: #7c86ad;
+  z-index: 1;
+}
+
+.page-number {
+  font-size: 15px;
+  color: var(--rule-red);
+  opacity: 0.7;
+}
+
+/* ── Elements ─────────────────────────────────────────────────────────────── */
+
+/*
+ * Every element is a positioning context so its rough.js overlay can sit at
+ * inset:0 behind the text.
+ */
+.el {
+  position: relative;
+  width: 100%;
+}
+
+.el > .el-body {
+  position: relative;
+  z-index: 1;
+}
+
+/* ── Typeset maths (KaTeX) ────────────────────────────────────────────────── */
+
+/*
+ * Three corrections to katex.min.css. All three are load-bearing.
+ *
+ * 1. THE FALLBACK. KaTeX ships `font: normal 1.21em KaTeX_Main, Times New Roman,
+ *    serif`. `Times New Roman` is a Windows/macOS font and `serif` is whatever the
+ *    machine says — so any glyph KaTeX_Main lacks would be drawn from a different
+ *    font per machine, with different widths, changing measured heights and
+ *    therefore pagination. Exactly the hazard the `font-family: 'Kalam'` note
+ *    above describes, arriving through a vendored stylesheet. Naming no fallback
+ *    does not stop Chrome substituting, but it stops us endorsing a
+ *    machine-specific choice and pushes any substitution into the PDF's font list
+ *    where scripts/render-pdf.ts will shout about it.
+ *
+ * 2. THE MARGIN. `.katex-display { margin: 1em 0 }` is a typesetter's block
+ *    spacing and it is measured into the element's height, where 1em of an
+ *    arbitrary font size is guaranteed not to be a multiple of --line-h. All
+ *    vertical space in this renderer comes from EL_GAP and BOX_INSET; see the
+ *    vertical rhythm note in lib/geometry.ts. Zeroed.
+ *
+ * 3. THE COLOUR. Restated as `inherit` so maths is written in whatever ink its
+ *    element is using. KaTeX sets no colour itself, but `.katex-error` does — and
+ *    that one is left alone on purpose, because a formula KaTeX could not parse
+ *    SHOULD be red and obvious.
+ */
+.katex {
+  font-family: KaTeX_Main;
+  color: inherit;
+}
+
+.katex-display {
+  margin: 0;
+}
+
+/*
+ * KaTeX's own accessibility escape hatch. `output: 'html'` in lib/latex.tsx means
+ * no MathML is emitted at all, so this should never match — it is here so that
+ * flipping that option back on cannot silently paint a duplicate expression over
+ * the page.
+ */
+.katex-mathml {
+  display: none;
+}
+
+/* ── The page stack (shared by the preview and the PDF surface) ───────────── */
+
+/*
+ * Used by BOTH app/page.tsx and app/render/page.tsx, via <NotebookRenderer>.
+ * On screen the sheets are spaced and centred; in print the gaps collapse so
+ * each sheet lands on its own physical page with no rounding slack.
+ */
+.page-stack {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 28px;
+  padding: 32px 0 64px;
+}
+
+/* ── Preview chrome (screen only — never in the PDF) ──────────────────────── */
+
+.preview-bar {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  width: 100%;
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  flex-wrap: wrap;
+  padding: 12px 20px;
+  background: #1f2937;
+  color: #e5e7eb;
+  font-family: ui-monospace, 'JetBrains Mono', monospace;
+  font-size: 13px;
+}
+
+.preview-bar button,
+.preview-bar label.file {
+  background: #374151;
+  color: #f9fafb;
+  border: 1px solid #4b5563;
+  border-radius: 4px;
+  padding: 5px 11px;
+  font: inherit;
+  cursor: pointer;
+}
+
+.preview-bar button:hover,
+.preview-bar label.file:hover {
+  background: #4b5563;
+}
+
+.preview-bar .spacer {
+  flex: 1;
+}
+
+.paper-shadow {
+  box-shadow: 0 10px 34px rgba(0, 0, 0, 0.42);
+}
+
+@media print {
+  body {
+    background: none;
+  }
+  .preview-bar {
+    display: none !important;
+  }
+  .page-stack {
+    display: block;
+    padding: 0;
+    gap: 0;
+  }
+  .paper-shadow {
+    box-shadow: none;
+  }
+  .paper {
+    /* Each page must land on its own sheet, with no rounding slack. */
+    break-after: page;
+    page-break-after: always;
+    margin: 0 !important;
+  }
+  .paper:last-child {
+    break-after: auto;
+    page-break-after: auto;
+  }
+}
+
+@page {
+  size: 210mm 297mm;
+  margin: 0;
+}

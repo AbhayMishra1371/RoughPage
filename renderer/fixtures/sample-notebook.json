@@ -1,0 +1,204 @@
+{
+  "_comment": "Test fixture, derived from EXAMPLE_NOTEBOOK in backend/app/schemas/notebook.py and extended to exercise the renderer: three topic groups (so breakOnTopic produces >=3 pages), all three importance levels, a LaTeX formula, and a 24-item bullet_list that cannot fit on one page and must split with a '(contd.)' marker. This is the fixture that should LOOK like a real student's notebook — judge the handwriting illusion here. For type coverage (every schema type, awkward inputs, mid-element splits of the drawn types) see all-elements.json instead. The 'flowchart' and 'comparison' here were placeholders in v1 and are now really drawn.",
+  "metadata": {
+    "title": "Binary Search",
+    "subject": "Data Structures & Algorithms",
+    "source_url": "https://youtube.com/watch?v=example",
+    "video_id": "example",
+    "style": "detailed",
+    "total_pages": 3,
+    "created_at": null
+  },
+  "pages": [
+    {
+      "page_number": 1,
+      "topic": "Binary Search",
+      "elements": [
+        {
+          "type": "heading",
+          "text": "Binary Search",
+          "level": 1,
+          "importance": "high"
+        },
+        {
+          "type": "definition",
+          "term": "Binary Search",
+          "meaning": "A search algorithm that finds a target by repeatedly halving the search space.",
+          "example": "Find 7 in [1,3,5,7,9] — check middle 5, go right, find 7.",
+          "importance": "high"
+        },
+        {
+          "type": "important_note",
+          "text": "Only works on SORTED arrays. Always verify before applying.",
+          "importance": "high"
+        },
+        {
+          "type": "flowchart",
+          "title": "Algorithm Steps",
+          "importance": "medium",
+          "steps": [
+            "Set low = 0, high = n-1",
+            "Find mid = (low + high) / 2",
+            "If arr[mid] == target → return mid",
+            "If target > arr[mid] → low = mid + 1",
+            "If target < arr[mid] → high = mid - 1",
+            "Repeat until low > high"
+          ]
+        },
+        {
+          "type": "sticky_formula",
+          "label": "Time Complexity",
+          "formula": "O(log n)",
+          "is_latex": false,
+          "importance": "high"
+        },
+        {
+          "type": "bullet_list",
+          "title": "Advantages",
+          "importance": "high",
+          "items": [
+            "Fast — eliminates half the array each step",
+            "O(log n) vs O(n) for linear search",
+            "Works well on large sorted datasets"
+          ]
+        },
+        {
+          "type": "summary",
+          "importance": "medium",
+          "points": [
+            "Only works on sorted arrays",
+            "Time complexity: O(log n)",
+            "Space complexity: O(1) for iterative"
+          ]
+        }
+      ]
+    },
+    {
+      "page_number": 2,
+      "topic": "Implementation Details",
+      "elements": [
+        {
+          "type": "heading",
+          "text": "Implementation Details",
+          "level": 1,
+          "importance": "high"
+        },
+        {
+          "type": "heading",
+          "text": "The overflow bug",
+          "level": 2,
+          "importance": "medium"
+        },
+        {
+          "type": "important_note",
+          "text": "Computing mid as (low + high) / 2 overflows on large arrays in fixed-width integer languages. This bug shipped in java.util.Arrays for nine years.",
+          "importance": "high"
+        },
+        {
+          "type": "sticky_formula",
+          "label": "Safe midpoint",
+          "formula": "mid = low + \\frac{high - low}{2}",
+          "is_latex": true,
+          "importance": "high"
+        },
+        {
+          "type": "bullet_list",
+          "title": "Every place an off-by-one hides",
+          "importance": "medium",
+          "items": [
+            "Initialising high to n instead of n-1",
+            "Using low < high when the loop needs low <= high",
+            "Forgetting to move past mid, so the range never shrinks",
+            "Returning low when the target is absent instead of -1",
+            "Assuming the array is non-empty before the first read",
+            "Comparing with == on floating-point values",
+            "Letting mid be computed before the emptiness check",
+            "Rounding mid down when the recurrence assumes rounding up",
+            "Mixing inclusive and exclusive bounds in the same function",
+            "Shrinking by mid rather than mid + 1 on the right branch",
+            "Shrinking by mid rather than mid - 1 on the left branch",
+            "Treating a signed length as unsigned",
+            "Searching a rotated array with the unrotated comparison",
+            "Using the wrong comparator for a descending sort",
+            "Assuming duplicates resolve to the first match",
+            "Assuming duplicates resolve to the last match",
+            "Trusting that the input was actually sorted",
+            "Recursing without a base case for the empty range",
+            "Blowing the stack on a recursive version for huge inputs",
+            "Reading arr[mid] after the bounds have already crossed",
+            "Caching the length across a mutation of the array",
+            "Applying it to a linked list and losing O(log n) entirely",
+            "Reusing a stale mid from the previous iteration",
+            "Writing the tests against the same wrong mental model"
+          ]
+        },
+        {
+          "type": "definition",
+          "term": "Invariant",
+          "meaning": "A condition true before and after every loop iteration — here, that the target lies within [low, high] if it is present at all.",
+          "example": null,
+          "importance": "medium"
+        },
+        {
+          "type": "summary",
+          "importance": "medium",
+          "points": [
+            "Prefer low + (high - low) / 2",
+            "Pick one bound convention and never mix them",
+            "State the loop invariant before writing the loop"
+          ]
+        }
+      ]
+    },
+    {
+      "page_number": 3,
+      "topic": "When Not To Use It",
+      "elements": [
+        {
+          "type": "heading",
+          "text": "When Not To Use It",
+          "level": 1,
+          "importance": "high"
+        },
+        {
+          "type": "bullet_list",
+          "title": null,
+          "importance": "low",
+          "items": [
+            "Unsorted data — sorting first costs O(n log n)",
+            "Very small arrays, where linear scan wins on cache locality",
+            "Linked lists, where random access is O(n)",
+            "Data that changes between searches"
+          ]
+        },
+        {
+          "type": "comparison",
+          "left_label": "Binary Search",
+          "right_label": "Hash Lookup",
+          "importance": "low",
+          "rows": [
+            ["O(log n)", "O(1) average"],
+            ["Needs order", "Needs a hash function"],
+            ["Supports range queries", "Point lookups only"]
+          ]
+        },
+        {
+          "type": "definition",
+          "term": "Interpolation search",
+          "meaning": "A variant that guesses the position from the value's distance between the bounds, reaching O(log log n) on uniformly distributed data.",
+          "example": "Looking up a name in a phone book by opening near where you expect it.",
+          "importance": "low"
+        },
+        {
+          "type": "summary",
+          "importance": "low",
+          "points": [
+            "Sorted access is the price of admission",
+            "A hash map beats it for pure point lookups",
+            "Range queries are where it still wins"
+          ]
+        }
+      ]
+    }
+  ]
+}
