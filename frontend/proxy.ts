@@ -2,11 +2,10 @@ import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
 /**
- * Auth gate (Next 16's renamed middleware). Refreshes the Supabase session
+ * Auth gate in Next.js 16 (proxy.ts). Refreshes the Supabase session
  * cookie on every navigation and redirects signed-out users to /sign-in.
  *
  * Landing page (/) and auth pages (/sign-in, /sign-up) remain publicly accessible.
- * With Supabase env vars unset or dummy, unauthenticated users can still view public pages.
  */
 export async function proxy(request: NextRequest) {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;

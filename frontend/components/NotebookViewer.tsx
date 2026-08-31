@@ -2,19 +2,31 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { getPdfUrl } from "@/lib/api";
 import { PaperTape, HandDrawnArrow, PdfIcon, PenIcon, NotebookIcon } from "@/components/Sketch";
+import { getSupabase } from "@/lib/supabase/client";
 
 interface NotebookViewerProps {
   id: string;
 }
 
 export default function NotebookViewer({ id }: NotebookViewerProps) {
+  const router = useRouter();
   const [currentPage, setCurrentPage] = useState(1);
   const [zoomLevel, setZoomLevel] = useState(100);
   const [activeStyle, setActiveStyle] = useState<"detailed" | "topper" | "last_minute">("detailed");
   const [isDownloading, setIsDownloading] = useState(false);
   const [copiedShare, setCopiedShare] = useState(false);
+
+  useEffect(() => {
+    const supabase = getSupabase();
+    supabase.auth.getUser().then(({ data }: { data: any }) => {
+      if (!data?.user) {
+        router.push("/sign-in");
+      }
+    });
+  }, [router]);
 
   const totalPages = 3;
 

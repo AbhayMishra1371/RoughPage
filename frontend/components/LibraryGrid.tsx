@@ -2,11 +2,14 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { deleteNotebook, getPdfUrl, listNotebooks, type NotebookSummary } from "@/lib/api";
 import { relativeDate } from "@/lib/jitter";
 import { PaperTape, PenIcon, PdfIcon, NotebookIcon } from "@/components/Sketch";
+import { getSupabase } from "@/lib/supabase/client";
 
 export default function LibraryGrid() {
+  const router = useRouter();
   const [items, setItems] = useState<NotebookSummary[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
@@ -22,8 +25,15 @@ export default function LibraryGrid() {
   }
 
   useEffect(() => {
-    load();
-  }, []);
+    const supabase = getSupabase();
+    supabase.auth.getUser().then(({ data }: { data: any }) => {
+      if (!data?.user) {
+        router.push("/sign-in");
+      } else {
+        load();
+      }
+    });
+  }, [router]);
 
   async function download(id: string) {
     setBusyId(id);

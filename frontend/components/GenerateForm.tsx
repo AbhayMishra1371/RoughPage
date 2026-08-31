@@ -1,10 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import PenProgress from "@/components/PenProgress";
 import { SketchUnderline, PaperTape, HandDrawnArrow, PenIcon, PdfIcon } from "@/components/Sketch";
-import { getAccessToken } from "@/lib/supabase/client";
+import { getAccessToken, getSupabase } from "@/lib/supabase/client";
 
 const STYLES: {
   value: "detailed" | "topper" | "last_minute";
@@ -47,12 +48,22 @@ type Phase =
   | { kind: "error"; message: string };
 
 export default function GenerateForm() {
+  const router = useRouter();
   const [url, setUrl] = useState("");
   const [subject, setSubject] = useState("");
   const [style, setStyle] = useState<"detailed" | "topper" | "last_minute">("detailed");
   const [phase, setPhase] = useState<Phase>({ kind: "idle" });
   const [downloading, setDownloading] = useState(false);
   const abortRef = useRef<AbortController | null>(null);
+
+  useEffect(() => {
+    const supabase = getSupabase();
+    supabase.auth.getUser().then(({ data }: { data: any }) => {
+      if (!data?.user) {
+        router.push("/sign-in");
+      }
+    });
+  }, [router]);
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
