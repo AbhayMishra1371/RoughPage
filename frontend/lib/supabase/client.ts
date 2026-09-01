@@ -18,6 +18,7 @@ export function getSupabase(): any {
         onAuthStateChange: () => ({ data: { subscription: { unsubscribe: () => {} } } }),
         signUp: async () => ({ error: null, data: {} }),
         signInWithPassword: async () => ({ error: null, data: {} }),
+        signInWithOAuth: async () => ({ error: null, data: {} }),
         signOut: async () => ({ error: null }),
       },
     };
@@ -36,6 +37,7 @@ export function getSupabase(): any {
         onAuthStateChange: () => ({ data: { subscription: { unsubscribe: () => {} } } }),
         signUp: async () => ({ error: null, data: {} }),
         signInWithPassword: async () => ({ error: null, data: {} }),
+        signInWithOAuth: async () => ({ error: null, data: {} }),
         signOut: async () => ({ error: null }),
       },
     };

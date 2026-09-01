@@ -51,10 +51,9 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=settings.cors_origins,
-    allow_methods=["GET", "POST", "DELETE", "OPTIONS"],
-    # Authorization: every authenticated call carries `Bearer <supabase jwt>`.
-    allow_headers=["Content-Type", "Authorization"],
+    allow_origins=["*"],
+    allow_methods=["*"],
+    allow_headers=["*"],
     expose_headers=[
         "Content-Disposition",
         "X-Roughpage-Pages",

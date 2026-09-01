@@ -33,7 +33,6 @@ _bearer = HTTPBearer(auto_error=False)
 _warned_once = False
 
 
-@lru_cache(maxsize=1)
 def _jwk_client() -> jwt.PyJWKClient:
     url = (
         get_settings().supabase_url.rstrip("/")
@@ -62,7 +61,7 @@ async def get_current_user(
             _warned_once = True
         return "dev-anonymous"
 
-    if credentials is None:
+    if credentials is None or not credentials.credentials:
         raise HTTPException(
             status.HTTP_401_UNAUTHORIZED,
             detail="Missing Authorization header.",
@@ -80,7 +79,7 @@ async def get_current_user(
             issuer=settings.supabase_url.rstrip("/") + "/auth/v1",
             options={"require": ["exp", "sub"]},
         )
-    except jwt.PyJWTError as e:
+    except (jwt.PyJWTError, jwt.PyJWKClientError, Exception) as e:
         raise HTTPException(
             status.HTTP_401_UNAUTHORIZED,
             detail=f"Invalid or expired token: {e}",
