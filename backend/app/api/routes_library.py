@@ -1,22 +1,13 @@
 """
 routes_library.py
 =================
-Saved-notebook endpoints: the persistence layer's HTTP surface.
+Saved-notebook endpoints using SQLAlchemy (PostgreSQL / Supabase).
 
     POST /notebooks              save a generated document (auto-renders PDF)
     GET  /notebooks              list MINE (summaries only — no heavy JSON)
     GET  /notebooks/{id}         one notebook, full document
     DELETE /notebooks/{id}       delete mine (+ best-effort bucket cleanup)
     GET  /notebooks/{id}/pdf-url ownership-checked signed download URL
-
-AUTHORIZATION IS A WHERE CLAUSE. Every query filters owner_id == token `sub`,
-and a foreign or missing id both return 404 — never 403, which would confirm
-existence to a stranger.
-
-AUTO-SAVE PIPELINE. POST saves metadata + JSON immediately, then renders the
-PDF as a background task so the client's save round-trip doesn't wait ~10s for
-Chromium. If storage is unconfigured (dev), the row still saves and pdf_url
-renders on demand instead.
 """
 
 from __future__ import annotations
@@ -30,7 +21,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_user
-from app.db import get_db, SessionLocal
+from app.db import SessionLocal, get_db
 from app.models import Notebook
 from app.schemas.library import (
     NotebookCreate,
@@ -68,7 +59,6 @@ def _summary(row: Notebook) -> NotebookSummary:
 
 
 def _get_owned(db: Session, notebook_id: str, owner_id: str) -> Notebook:
-    """404 on missing OR foreign; see module docstring for why not 403."""
     row = db.get(Notebook, notebook_id)
     if row is None or row.owner_id != owner_id:
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail="Notebook not found.")
@@ -76,7 +66,6 @@ def _get_owned(db: Session, notebook_id: str, owner_id: str) -> Notebook:
 
 
 class _PdfJob:
-    """Async render+upload callable for BackgroundTasks."""
     """Callable wrapper so BackgroundTasks can run the async render+upload."""
 
     def __init__(self, notebook_id: str, document_json: str, object_key: str):
@@ -107,7 +96,7 @@ class _PdfJob:
             logger.error("Storage upload failed for %s: %s", self.notebook_id, e)
 
 
-async def _ensure_pdf(row: Notebook) -> str:
+async def _ensure_pdf(row: Notebook) -> PdfUrlResponse:
     """Render+upload now if the PDF isn't stored yet, then return a signed URL."""
     if row.pdf_object_key is None:
         logger.info("Rendering PDF on demand for %s.", row.id)

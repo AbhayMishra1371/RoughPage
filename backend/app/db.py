@@ -32,6 +32,12 @@ engine = _make_engine()
 SessionLocal = sessionmaker(bind=engine, autoflush=False, expire_on_commit=False)
 
 
+def init_db() -> None:
+    """Create tables if they do not exist."""
+    from app.models import Base
+    Base.metadata.create_all(bind=engine)
+
+
 def get_db() -> Generator[Session, None, None]:
     """One session per request; always closed, even when the route raises."""
     db = SessionLocal()
@@ -39,3 +45,4 @@ def get_db() -> Generator[Session, None, None]:
         yield db
     finally:
         db.close()
+

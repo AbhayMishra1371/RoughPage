@@ -28,6 +28,7 @@ from fastapi.responses import JSONResponse
 from app.api.routes import router as api_router
 from app.api.routes_library import router as library_router
 from app.config import get_settings
+from app.db import init_db
 from app.services.export.pdf_exporter import ExportError
 from app.services.notebook_service import PipelineError
 
@@ -37,6 +38,7 @@ logging.basicConfig(
 )
 
 settings = get_settings()
+init_db()
 
 app = FastAPI(
     title="RoughPage AI",
@@ -51,7 +53,10 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+     allow_origins=[
+        "http://localhost:3000",
+        "http://127.0.0.1:3000",
+    ],
     allow_methods=["*"],
     allow_headers=["*"],
     expose_headers=[
