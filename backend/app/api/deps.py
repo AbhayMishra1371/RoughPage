@@ -41,14 +41,20 @@ def _jwk_client() -> jwt.PyJWKClient:
     return jwt.PyJWKClient(url)
 
 
-async def get_current_user(
-    credentials: HTTPAuthorizationCredentials | None = Depends(_bearer),
-) -> str:
-    """
-    Bearer token → Supabase user id (`sub`). 401/503 otherwise.
+from dataclasses import dataclass
 
-    Returns just the id because that is all authorization needs; callers who
-    want the email can decode it themselves from their own session.
+
+@dataclass
+class AuthContext:
+    user_id: str
+    token: str | None = None
+
+
+async def get_current_auth(
+    credentials: HTTPAuthorizationCredentials | None = Depends(_bearer),
+) -> AuthContext:
+    """
+    Bearer token → AuthContext (user_id and raw token). 401/503 otherwise.
     """
     global _warned_once
 
@@ -59,7 +65,7 @@ async def get_current_user(
                 "SUPABASE_URL not set — auth disabled, endpoints are OPEN."
             )
             _warned_once = True
-        return "dev-anonymous"
+        return AuthContext(user_id="dev-anonymous", token=None)
 
     if credentials is None or not credentials.credentials:
         raise HTTPException(
@@ -90,4 +96,13 @@ async def get_current_user(
     if not sub:
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, detail="Token has no subject.")
 
-    return str(sub)
+    return AuthContext(user_id=str(sub), token=token)
+
+
+async def get_current_user(
+    auth: AuthContext = Depends(get_current_auth),
+) -> str:
+    """
+    Bearer token → Supabase user id (`sub`). 401/503 otherwise.
+    """
+    return auth.user_id

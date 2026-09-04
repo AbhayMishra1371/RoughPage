@@ -18,7 +18,7 @@ the path is resolved explicitly here instead of relying on the current directory
 from functools import lru_cache
 from pathlib import Path
 
-from pydantic import Field, field_validator
+from pydantic import AliasChoices, Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 # backend/app/config.py → backend/app → backend → <repo root>
@@ -83,21 +83,27 @@ class Settings(BaseSettings):
     database_url: str = Field(
         default=f"sqlite:///{(REPO_ROOT / 'backend' / 'roughpage.db').as_posix()}"
     )
-    """Where notebook metadata lives. SQLite by default; a Postgres URL works
-    unchanged because everything goes through SQLAlchemy."""
+    """Where notebook metadata lives when SQLite fallback is used."""
 
-    supabase_url: str | None = Field(default=None)
+    supabase_url: str | None = Field(
+        default=None,
+        validation_alias=AliasChoices("supabase_url", "next_public_supabase_url"),
+    )
     """
-    e.g. https://abcdefgh.supabase.co. Two jobs: the JWKS endpoint used to
-    verify frontend auth tokens, and the base URL of the Storage API.
-
-    LEFT UNSET, THE API RUNS UNAUTHENTICATED (see app/api/deps.py): generation
-    and export work exactly as before, which keeps the CLI/renderer workflows
-    alive on a dev machine. Set it and every expensive route requires a valid
-    Supabase JWT.
+    e.g. https://abcdefgh.supabase.co. Used for Auth JWKS, Supabase Storage,
+    and the Supabase PostgREST REST API.
     """
 
-    supabase_service_key: str | None = Field(default=None)
+    supabase_anon_key: str | None = Field(
+        default=None,
+        validation_alias=AliasChoices("supabase_anon_key", "next_public_supabase_anon_key"),
+    )
+    """Supabase Anon/Public API key, required for calling Supabase REST API."""
+
+    supabase_service_key: str | None = Field(
+        default=None,
+        validation_alias=AliasChoices("supabase_service_key", "supabase_service_role_key"),
+    )
     """
     Service-role key — bypasses row-level security. SERVER-SIDE ONLY; it must
     never reach the frontend bundle. Needed to upload PDFs into the private
