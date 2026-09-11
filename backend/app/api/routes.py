@@ -28,15 +28,19 @@ that caught them would only be re-deriving what the exception already knows.
 from __future__ import annotations
 
 import asyncio
+from datetime import datetime, timezone
 import logging
 from typing import AsyncIterator
+import uuid
 
 from fastapi import APIRouter, Depends, Response
 from fastapi.responses import StreamingResponse
 from starlette.concurrency import run_in_threadpool
 
-from app.api.deps import get_current_user
+from app.api.deps import AuthContext, get_current_auth, get_current_user
+from app.api.routes_library import _PdfJob, _summary
 from app.config import get_settings
+from app.schemas.library import NotebookSummary
 from app.schemas.notebook import NotebookDocument
 from app.schemas.request import ExportRequest, GenerateRequest, TranscriptRequest
 from app.schemas.response import (
@@ -45,6 +49,7 @@ from app.schemas.response import (
     StreamErrorEvent,
     TranscriptResponse,
 )
+from app.services import storage, supabase_db
 from app.services.export.pdf_exporter import export_pdf, renderer_status, safe_filename
 from app.services.notebook_service import (
     PipelineError,
@@ -143,7 +148,7 @@ def _frame(event: str, data: str) -> str:
 
 
 async def _stream_notebook(
-    source: ResolvedSource, request: GenerateRequest
+    source: ResolvedSource, request: GenerateRequest, auth: AuthContext
 ) -> AsyncIterator[str]:
     """
     Run generation on a worker thread and relay its progress as it happens.
@@ -175,6 +180,47 @@ async def _stream_notebook(
                 on_progress=sink,
             )
             emit(("document", doc))
+
+            # Automatically persist to Supabase if configured
+            if supabase_db.is_supabase_db_configured() and auth.user_id:
+                try:
+                    sink("saving", "Filing handwritten notebook into your library...", None, None)
+                    notebook_id = str(uuid.uuid4())
+                    now_iso = datetime.now(timezone.utc).isoformat()
+                    meta = doc.metadata
+                    row_data = {
+                        "id": notebook_id,
+                        "owner_id": auth.user_id,
+                        "title": meta.title or meta.subject or "Lecture Notes",
+                        "subject": meta.subject,
+                        "style": meta.style.value if hasattr(meta.style, "value") else str(meta.style),
+                        "source_url": meta.source_url,
+                        "video_id": meta.video_id,
+                        "page_count": len(doc.pages),
+                        "document_json": doc.model_dump_json(),
+                        "created_at": now_iso,
+                    }
+
+                    insert_fut = asyncio.run_coroutine_threadsafe(
+                        supabase_db.insert_notebook(row_data, user_token=auth.token),
+                        loop,
+                    )
+                    record = insert_fut.result(timeout=30)
+                    summary = _summary(record)
+
+                    if storage.storage_configured():
+                        pdf_job = _PdfJob(
+                            notebook_id,
+                            row_data["document_json"],
+                            f"{auth.user_id}/{notebook_id}.pdf",
+                            user_token=auth.token,
+                        )
+                        asyncio.run_coroutine_threadsafe(pdf_job(), loop)
+
+                    emit(("saved", summary))
+                except Exception as save_err:
+                    logger.warning("Failed to auto-save notebook to Supabase: %s", save_err)
+
         except PipelineError as e:
             emit(("error", StreamErrorEvent(detail=e.detail, code=e.code)))
         except Exception as e:  # noqa: BLE001 — must reach the client, not the log only
@@ -201,6 +247,8 @@ async def _stream_notebook(
             kind, payload = item
             if kind == "document":
                 yield _frame("document", payload.model_dump_json())
+            elif kind == "saved":
+                yield _frame("saved", payload.model_dump_json())
             elif kind == "error":
                 yield _frame("error", payload.model_dump_json())
             else:
@@ -217,13 +265,14 @@ async def _stream_notebook(
 @router.post("/generate/stream", tags=["Notebook"])
 async def generate_stream(
     request: GenerateRequest,
-    owner_id: str = Depends(get_current_user),
+    auth: AuthContext = Depends(get_current_auth),
 ) -> StreamingResponse:
     """
-    Generation as Server-Sent Events. Three event types:
+    Generation as Server-Sent Events. Four event types:
 
         event: progress    {"stage","message","current","total"}   — repeatedly
-        event: document    a bare NotebookDocument                 — terminal, success
+        event: document    a bare NotebookDocument                 — success
+        event: saved       a NotebookSummary with notebook ID      — saved to DB
         event: error       {"detail","code"}                       — terminal, failure
 
     The transcript is fetched BEFORE the stream opens, so an unparseable URL or a
@@ -237,7 +286,7 @@ async def generate_stream(
     )
 
     return StreamingResponse(
-        _stream_notebook(source, request),
+        _stream_notebook(source, request, auth),
         media_type="text/event-stream",
         headers={
             "Cache-Control": "no-cache, no-transform",

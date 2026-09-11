@@ -11,6 +11,7 @@ Everything else (rules, element reference, example)
 lives in system_prompt.py and is sent once.
 """
 
+import json
 from app.schemas.notebook import NoteStyle
 
 
@@ -58,61 +59,68 @@ def build_user_prompt(
     video_id: str | None = None,
     chunk_index: int | None = None,
     total_chunks: int | None = None,
+    title: str | None = None,
 ) -> str:
     """
-    Builds the user-side prompt for a single Groq call.
-
-    Args:
-        transcript:    The cleaned transcript text (or one chunk of it).
-        style:         The requested note style.
-        subject:       Optional subject hint.
-        source_url:    Original YouTube URL for metadata.
-        video_id:      Video ID for metadata.
-        chunk_index:   If chunking, which chunk this is (0-indexed).
-        total_chunks:  Total number of chunks.
-
-    Returns:
-        A short prompt string to send as the user message.
+    Builds the user prompt for single-call lecture note generation.
     """
+    style_block = STYLE_INSTRUCTIONS[style]
+    subject_hint = f"Subject: {subject}\n" if subject else ""
+    title_hint = f'Topic Title: "{title}"\n' if title else ""
 
-    style_block   = STYLE_INSTRUCTIONS[style]
-    subject_line  = subject or "(infer from transcript)"
-    url_value     = f'"{source_url}"' if source_url else "null"
-    id_value      = f'"{video_id}"'   if video_id   else "null"
-    style_value   = style.value
-
-    chunk_context = ""
-    if chunk_index is not None and total_chunks is not None:
-        chunk_context = f"""
-CHUNK INFO
-==========
-This is chunk {chunk_index + 1} of {total_chunks}.
-page_number values in this chunk should start from {chunk_index * 10 + 1}.
-Continue page numbering from where the previous chunk left off.
-Do not re-introduce topics already covered in earlier chunks.
-""".strip()
-
-    prompt = f"""
-METADATA TO EMBED IN OUTPUT
-============================
-title:      (a short topic title inferred from the transcript)
-subject:    {subject_line}
-source_url: {url_value}
-video_id:   {id_value}
-style:      "{style_value}"
-total_pages: 0
-created_at:  null
-
+    return f"""
 {style_block}
 
-{chunk_context}
-
-TRANSCRIPT
+{subject_hint}{title_hint}TRANSCRIPT
 ==========
 {transcript}
 
-Now output the NotebookDocument JSON.
-Raw JSON only. No markdown. No explanation. No code fences.
+Generate the lecture notes JSON:
+{{
+  "title": "{title or '(inferred lecture title)'}",
+  "pages": [
+    {{
+      "topic": "Section Topic",
+      "elements": [ ... ]
+    }}
+  ]
+}}
+Raw JSON only. No markdown. No code fences.
 """.strip()
 
-    return prompt
+
+def build_planner_prompt_from_knowledge(
+    knowledge: dict,
+    style: NoteStyle = NoteStyle.DETAILED,
+    subject: str | None = None,
+    source_url: str | None = None,
+    video_id: str | None = None,
+    title: str | None = None,
+) -> str:
+    """
+    Builds the user prompt for the Notebook Planner using unified knowledge.
+    """
+    style_block = STYLE_INSTRUCTIONS[style]
+    subject_hint = f"Subject: {subject}\n" if subject else ""
+    title_hint = f'Topic Title: "{title}"\n' if title else ""
+    knowledge_str = json.dumps(knowledge, indent=2, ensure_ascii=False)
+
+    return f"""
+{style_block}
+
+{subject_hint}{title_hint}UNIFIED KNOWLEDGE BASE
+======================
+{knowledge_str}
+
+Plan and synthesize these concepts into cohesive notebook pages as JSON:
+{{
+  "title": "{title or '(inferred lecture title)'}",
+  "pages": [
+    {{
+      "topic": "Section Topic",
+      "elements": [ ... ]
+    }}
+  ]
+}}
+Raw JSON only. No markdown. No code fences.
+""".strip()

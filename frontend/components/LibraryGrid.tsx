@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { deleteNotebook, getPdfUrl, listNotebooks, type NotebookSummary } from "@/lib/api";
+import { deleteNotebook, downloadNotebookPdfById, listNotebooks, type NotebookSummary } from "@/lib/api";
 import { relativeDate } from "@/lib/jitter";
 import { PaperTape, PenIcon, PdfIcon, NotebookIcon } from "@/components/Sketch";
 import { getSupabase } from "@/lib/supabase/client";
@@ -35,10 +35,10 @@ export default function LibraryGrid() {
     });
   }, [router]);
 
-  async function download(id: string) {
+  async function download(id: string, title?: string) {
     setBusyId(id);
     try {
-      window.open(await getPdfUrl(id), "_blank");
+      await downloadNotebookPdfById(id, title);
     } catch (e) {
       setError(e instanceof Error ? e.message : "PDF failed.");
     } finally {
@@ -246,7 +246,7 @@ export default function LibraryGrid() {
                 {/* PDF & Delete Actions */}
                 <div className="flex items-center gap-2">
                   <button
-                    onClick={() => download(nb.id)}
+                    onClick={() => download(nb.id, nb.title)}
                     disabled={busyId === nb.id}
                     className="flex items-center gap-1 bg-amber-100 hover:bg-amber-200 text-amber-900 px-2.5 py-1 border border-amber-300 font-medium transition-colors cursor-pointer disabled:opacity-50"
                     title="Download PDF"

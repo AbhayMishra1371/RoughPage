@@ -6,6 +6,8 @@ import { useRouter } from "next/navigation";
 import PenProgress from "@/components/PenProgress";
 import { SketchUnderline, PaperTape, HandDrawnArrow, PenIcon, PdfIcon } from "@/components/Sketch";
 import { getAccessToken, getSupabase } from "@/lib/supabase/client";
+import { readSse } from "@/lib/sse";
+import { saveNotebook, downloadNotebookPdfById, downloadNotebookPdf, type NotebookSummary } from "@/lib/api";
 
 const STYLES: {
   value: "detailed" | "topper" | "last_minute";
@@ -54,6 +56,7 @@ export default function GenerateForm() {
   const [style, setStyle] = useState<"detailed" | "topper" | "last_minute">("detailed");
   const [phase, setPhase] = useState<Phase>({ kind: "idle" });
   const [downloading, setDownloading] = useState(false);
+  const [lastDoc, setLastDoc] = useState<any>(null);
   const abortRef = useRef<AbortController | null>(null);
 
   useEffect(() => {
@@ -103,29 +106,66 @@ export default function GenerateForm() {
       }
 
       let doc: any = null;
-      for await (const frame of (await res.body) as any) {
+      let savedSummary: NotebookSummary | null = null;
+      for await (const frame of readSse(res)) {
         if (frame.event === "progress") {
-          const p = JSON.parse(frame.data);
-          const percent =
-            p.current != null && p.total
-              ? Math.max(8, (p.current / p.total) * 92)
-              : Math.min(90, (phase as { percent?: number }).percent ?? 30);
-          setPhase({ kind: "working", percent, message: p.message });
+          try {
+            const p = JSON.parse(frame.data);
+            const percent =
+              p.current != null && p.total
+                ? Math.max(8, (p.current / p.total) * 92)
+                : Math.min(90, (phase as { percent?: number }).percent ?? 30);
+            setPhase({ kind: "working", percent, message: p.message });
+          } catch {
+            /* ignore progress parse errors */
+          }
         } else if (frame.event === "document") {
           doc = JSON.parse(frame.data);
+          setLastDoc(doc);
+        } else if (frame.event === "saved") {
+          try {
+            savedSummary = JSON.parse(frame.data);
+          } catch {
+            /* ignore */
+          }
         } else if (frame.event === "error") {
-          throw new Error(JSON.parse(frame.data).detail ?? "Generation failed.");
+          try {
+            throw new Error(JSON.parse(frame.data).detail ?? "Generation failed.");
+          } catch (e) {
+            throw new Error(frame.data || "Generation failed.");
+          }
         }
       }
       if (!doc) throw new Error("The generation stream completed without a document.");
 
-      setPhase({
-        kind: "working",
-        percent: 96,
-        message: "Filing handwritten notebook into your library...",
-      });
+      let summary: NotebookSummary;
+      if (savedSummary) {
+        summary = savedSummary;
+      } else {
+        setPhase({
+          kind: "working",
+          percent: 96,
+          message: "Filing handwritten notebook into your library...",
+        });
+        try {
+          summary = await saveNotebook(doc);
+        } catch (saveErr) {
+          console.warn("Could not save to library, using local fallback:", saveErr);
+          summary = {
+            id: "local",
+            title: doc.metadata?.title || "Lecture Notes",
+            subject: doc.metadata?.subject || null,
+            style: doc.metadata?.style || "detailed",
+            source_url: doc.metadata?.source_url || null,
+            video_id: doc.metadata?.video_id || null,
+            page_count: doc.pages?.length || 1,
+            pdf_ready: false,
+            created_at: new Date().toISOString(),
+          };
+        }
+      }
 
-      setPhase({ kind: "saved", notebook: doc });
+      setPhase({ kind: "saved", notebook: summary });
     } catch (err) {
       if ((err as Error).name === "AbortError") {
         setPhase({ kind: "idle" });
@@ -138,10 +178,18 @@ export default function GenerateForm() {
     }
   }
 
-  async function download(id: string) {
+  async function download(id: string, title?: string) {
     setDownloading(true);
     try {
-      window.open(`/api/notebooks/${id}/pdf-url`, "_blank");
+      if (id && id !== "local") {
+        await downloadNotebookPdfById(id, title);
+      } else if (lastDoc) {
+        await downloadNotebookPdf(lastDoc, title);
+      } else {
+        throw new Error("No notebook document available to export.");
+      }
+    } catch (err) {
+      alert("Downloading PDF failed or PDF is still preparing in the background. Please try again in a moment.");
     } finally {
       setDownloading(false);
     }
@@ -351,8 +399,17 @@ export default function GenerateForm() {
             </p>
 
             <div className="pt-2 flex flex-wrap items-center justify-center gap-4">
+              {phase.notebook.id !== "local" && (
+                <Link
+                  href={`/notes/${phase.notebook.id}`}
+                  className="inline-flex items-center gap-1.5 bg-white border-2 border-[var(--ink)] text-[var(--ink)] px-5 py-2.5 font-medium text-sm hover:bg-amber-100 shadow-[2px_3px_0px_#111827] hover:-translate-y-0.5 transition-all"
+                >
+                  <span>Open Notebook 📖</span>
+                </Link>
+              )}
+
               <button
-                onClick={() => download(phase.notebook.id)}
+                onClick={() => download(phase.notebook.id, phase.notebook.title)}
                 disabled={downloading}
                 className="inline-flex items-center gap-2 bg-[var(--coral)] text-white px-5 py-2.5 font-medium text-sm shadow-[2px_3px_0px_#111827] hover:-translate-y-0.5 transition-all cursor-pointer"
               >

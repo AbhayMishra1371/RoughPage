@@ -1,5 +1,22 @@
 @import "tailwindcss";
 
+@theme {
+  --font-hand: var(--font-hand-loaded), "Kalam", cursive;
+  --font-serif: var(--font-serif-loaded), "Playfair Display", Georgia, serif;
+  --font-sans: var(--font-sans-loaded), Inter, sans-serif;
+  --font-mono: var(--font-mono-loaded), "JetBrains Mono", monospace;
+}
+
+.font-hand {
+  font-family: var(--font-hand-loaded), "Kalam", cursive !important;
+}
+.font-serif {
+  font-family: var(--font-serif-loaded), "Playfair Display", Georgia, serif !important;
+}
+.font-mono {
+  font-family: var(--font-mono-loaded), "JetBrains Mono", monospace !important;
+}
+
 :root {
   --bg-paper: #faf6ee;
   --bg-paper-darker: #f3ece0;

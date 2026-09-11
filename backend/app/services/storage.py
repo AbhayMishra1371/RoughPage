@@ -88,6 +88,21 @@ async def signed_pdf_url(object_key: str, ttl_s: int = DEFAULT_URL_TTL_S) -> str
     return f"{base}/storage/v1{signed}"
 
 
+async def download_pdf(object_key: str) -> bytes:
+    """Download PDF bytes for object_key from private bucket."""
+    base, key, bucket = _base()
+    url = f"{base}/storage/v1/object/authenticated/{_object_path(bucket, object_key)}"
+    async with httpx.AsyncClient(timeout=60) as client:
+        resp = await client.get(
+            url,
+            headers={"Authorization": f"Bearer {key}"},
+        )
+    if resp.status_code >= 400:
+        logger.error("Storage download failed (%s): %s", resp.status_code, resp.text[:300])
+        raise StorageUnavailable(f"Download failed with status {resp.status_code}.")
+    return resp.content
+
+
 async def delete_object(object_key: str) -> None:
     """Best-effort delete; a missing object is fine (200/404 both acceptable)."""
     base, key, bucket = _base()

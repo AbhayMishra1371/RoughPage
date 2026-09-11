@@ -18,7 +18,7 @@ import uuid
 from datetime import datetime, timezone
 from typing import Any
 
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Response, status
 
 from app.api.deps import AuthContext, get_current_auth
 from app.schemas.library import (
@@ -29,7 +29,7 @@ from app.schemas.library import (
 )
 from app.schemas.notebook import NotebookDocument
 from app.services import storage, supabase_db
-from app.services.export.pdf_exporter import ExportError, export_pdf
+from app.services.export.pdf_exporter import ExportError, export_pdf, safe_filename
 
 logger = logging.getLogger(__name__)
 router = APIRouter(tags=["Library"])
@@ -95,6 +95,7 @@ class _PdfJob:
                 self.notebook_id,
                 updates,
                 user_token=self.user_token,
+                use_service_role=True,
             )
 
             logger.info("Auto-saved PDF for notebook %s.", self.notebook_id)
@@ -269,3 +270,55 @@ async def notebook_pdf_url(
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail="Notebook not found.")
 
     return await _ensure_pdf(record, user_token=auth.token)
+
+
+@router.get(
+    "/notebooks/{notebook_id}/pdf",
+    tags=["Library"],
+    response_class=Response,
+    responses={200: {"content": {"application/pdf": {}}, "description": "The rendered notebook PDF."}},
+)
+async def download_notebook_pdf_by_id(
+    notebook_id: str,
+    disposition: str = "inline",
+    auth: AuthContext = Depends(get_current_auth),
+) -> Response:
+    """Renders and streams the notebook PDF directly using the renderer."""
+    try:
+        record = await supabase_db.get_notebook(notebook_id, auth.user_id, user_token=auth.token)
+    except supabase_db.SupabaseDbError as e:
+        raise HTTPException(
+            status_code=e.status_code or status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Database error: {e}",
+        ) from e
+
+    if not record:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, detail="Notebook not found.")
+
+    key = record.get("pdf_object_key")
+    filename = safe_filename(f"{record.get('title', 'notebook')}.pdf")
+    if key and storage.storage_configured():
+        try:
+            pdf_bytes = await storage.download_pdf(key)
+            return Response(
+                content=pdf_bytes,
+                media_type="application/pdf",
+                headers={
+                    "Content-Disposition": f'{disposition}; filename="{filename}"',
+                    "X-Roughpage-Pages": str(record.get("page_count") or ""),
+                },
+            )
+        except Exception as e:
+            logger.warning("Could not fetch cached PDF for %s from storage: %s", notebook_id, e)
+
+    doc_raw = record["document_json"]
+    doc_dict = json.loads(doc_raw) if isinstance(doc_raw, str) else doc_raw
+    result = await export_pdf(doc_dict)
+    return Response(
+        content=result.pdf,
+        media_type="application/pdf",
+        headers={
+            "Content-Disposition": f'{disposition}; filename="{filename}"',
+            "X-Roughpage-Pages": str(result.pages if result.pages is not None else ""),
+        },
+    )

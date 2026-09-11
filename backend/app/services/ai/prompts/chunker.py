@@ -28,12 +28,10 @@ from dataclasses import dataclass
 
 
 # ─────────────────────────────────────────────
-# Config
-# ─────────────────────────────────────────────
-
-WORDS_PER_CHUNK    = 1500   # ~5–8 min of lecture audio
-MAX_CHUNK_OVERLAP  = 100    # words of overlap between chunks
-                             # ensures no concept is split mid-explanation
+SINGLE_CALL_WORD_THRESHOLD = 12000  # Up to ~60-80 min lecture in ONE single LLM call
+WORDS_PER_CHUNK            = 3500   # Compact chunks for fast, reliable extraction (>12k words)
+MAX_CHUNK_OVERLAP          = 150    # words of overlap between chunks
+                                     # ensures no concept is split mid-explanation
 
 
 # ─────────────────────────────────────────────
@@ -108,8 +106,8 @@ def chunk_by_word_count(
     ]
 
 
-def needs_chunking(transcript: str, threshold: int = WORDS_PER_CHUNK) -> bool:
-    """Returns True if the transcript is long enough to require chunking."""
+def needs_chunking(transcript: str, threshold: int = SINGLE_CALL_WORD_THRESHOLD) -> bool:
+    """Returns True if the transcript exceeds single-call capacity and requires chunking."""
     return len(transcript.split()) > threshold
 
 

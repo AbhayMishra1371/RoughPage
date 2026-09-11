@@ -35,10 +35,14 @@ def is_supabase_db_configured() -> bool:
     return bool(s.supabase_url and (s.supabase_anon_key or s.supabase_service_key))
 
 
-def _get_headers(user_token: str | None = None) -> dict[str, str]:
+def _get_headers(user_token: str | None = None, use_service_role: bool = False) -> dict[str, str]:
     s = get_settings()
-    api_key = s.supabase_service_key or s.supabase_anon_key or ""
-    bearer_token = user_token or s.supabase_service_key or s.supabase_anon_key or ""
+    if use_service_role and s.supabase_service_key:
+        api_key = s.supabase_service_key
+        bearer_token = s.supabase_service_key
+    else:
+        api_key = s.supabase_anon_key or s.supabase_service_key or ""
+        bearer_token = user_token or s.supabase_service_key or s.supabase_anon_key or ""
     return {
         "apikey": api_key,
         "Authorization": f"Bearer {bearer_token}",
@@ -128,11 +132,12 @@ async def update_notebook(
     notebook_id: str,
     updates: dict[str, Any],
     user_token: str | None = None,
+    use_service_role: bool = False,
 ) -> dict[str, Any] | None:
     """Update a notebook record."""
     params = {"id": f"eq.{notebook_id}"}
     url = _table_url()
-    headers = _get_headers(user_token)
+    headers = _get_headers(user_token, use_service_role=use_service_role)
     headers["Prefer"] = "return=representation"
 
     async with httpx.AsyncClient(timeout=30) as client:

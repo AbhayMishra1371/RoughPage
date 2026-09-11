@@ -54,6 +54,8 @@ flowchart     — linear sequences only. for branching logic use diagram.
 diagram       — every node in edges must appear in the nodes list.
 example       — always include one for any algorithm or formula introduced.
 mind_map      — use at most once per major topic, at the END of the section.
+                 branches is a list of strings. sub_branches is an object mapping each
+                 branch name to a list of sub-item strings: {"Branch A": ["Sub 1", "Sub 2"]}.
 summary       — always end every page group with one.
 screenshot    — ONLY for visuals never described in the spoken transcript.
                 NEVER use for frames showing only the lecturer's face.
@@ -86,34 +88,21 @@ Set importance on every element — the renderer uses it for visual weight:
 OUTPUT_RULES = """
 OUTPUT FORMAT
 =============
-- Output ONLY raw JSON. Nothing before it. Nothing after it.
-- Do NOT use markdown. Do NOT use ```json or ``` fences.
-- Do NOT generate "id" fields — they are assigned later by the server.
-- Do NOT set total_pages — set it to 0. The renderer counts pages.
-- Do NOT set created_at — set it to null.
-- Do NOT make any visual or layout decisions.
-- All string values must be in the same language as the transcript.
-- importance accepts only: "low", "medium", "high"
-- style must match the value given in the user message exactly.
+- Output ONLY raw JSON: {"title": "...", "pages": [...]}.
+- Do NOT output markdown or code fences.
+- Do NOT generate metadata, total_pages, created_at, or id fields (Python handles all metadata).
+- Do NOT compute page numbering (Python sequences pages automatically).
+- Set importance on every element: "low", "medium", or "high".
 """
 
 
 FEW_SHOT_EXAMPLE = """
-EXAMPLE — valid output for a Binary Search lecture (detailed style)
-===================================================================
+EXAMPLE — valid output for a Binary Search lecture
+===================================================
 {
-  "metadata": {
-    "title": "Binary Search",
-    "subject": "Data Structures & Algorithms",
-    "source_url": null,
-    "video_id": null,
-    "style": "detailed",
-    "total_pages": 0,
-    "created_at": null
-  },
+  "title": "Binary Search",
   "pages": [
     {
-      "page_number": 1,
       "topic": "Binary Search — Introduction",
       "elements": [
         {
@@ -155,20 +144,13 @@ EXAMPLE — valid output for a Binary Search lecture (detailed style)
           "importance": "high"
         },
         {
-          "type": "example",
-          "context": "Array: [1, 3, 5, 7, 9], target: 7",
-          "walkthrough": "mid = 2 → arr[2] = 5 < 7 → go right. mid = 3 → arr[3] = 7 == target → return 3.",
-          "importance": "medium"
-        },
-        {
           "type": "comparison",
           "title": "Binary Search vs Linear Search",
           "left_label": "Binary Search",
           "right_label": "Linear Search",
           "rows": [
             ["O(log n)", "O(n)"],
-            ["Sorted array only", "Works on any array"],
-            ["Divide and conquer", "Sequential scan"]
+            ["Sorted array only", "Works on any array"]
           ],
           "importance": "medium"
         },
@@ -176,8 +158,7 @@ EXAMPLE — valid output for a Binary Search lecture (detailed style)
           "type": "summary",
           "points": [
             "Only works on sorted arrays",
-            "Time complexity: O(log n)",
-            "Space complexity: O(1) iterative, O(log n) recursive"
+            "Time complexity: O(log n)"
           ],
           "importance": "medium"
         }

@@ -15,8 +15,8 @@ Rules:
 - This schema is the only thing they share.
 """
 
-from pydantic import BaseModel, Field
-from typing import Literal, Union, Optional
+from pydantic import BaseModel, Field, field_validator
+from typing import Literal, Union, Optional, Any
 from enum import Enum
 
 class ImportanceLevel(str, Enum):
@@ -127,6 +127,29 @@ class ComparisonElement(_BaseElement):
     right_label: str
     rows: list[tuple[str, str]]
 
+    @field_validator("rows", mode="before")
+    @classmethod
+    def _clean_rows(cls, v: Any) -> list[tuple[str, str]]:
+        if not isinstance(v, list):
+            return []
+        cleaned: list[tuple[str, str]] = []
+        for row in v:
+            if isinstance(row, (list, tuple)):
+                if len(row) >= 2:
+                    cleaned.append((str(row[0]), str(row[1])))
+                elif len(row) == 1:
+                    cleaned.append((str(row[0]), ""))
+                else:
+                    cleaned.append(("", ""))
+            elif isinstance(row, dict):
+                vals = list(row.values())
+                left = str(vals[0]) if len(vals) > 0 else ""
+                right = str(vals[1]) if len(vals) > 1 else ""
+                cleaned.append((left, right))
+            else:
+                cleaned.append((str(row), ""))
+        return cleaned
+
 
 class FlowchartElement(_BaseElement):
     """
@@ -151,6 +174,25 @@ class DiagramElement(_BaseElement):
     nodes: list[str]
     edges: list[tuple[str, str]]
     edge_labels: Optional[list[str]] = None
+
+    @field_validator("edges", mode="before")
+    @classmethod
+    def _clean_edges(cls, v: Any) -> list[tuple[str, str]]:
+        if not isinstance(v, list):
+            return []
+        cleaned: list[tuple[str, str]] = []
+        for edge in v:
+            if isinstance(edge, (list, tuple)):
+                if len(edge) >= 2:
+                    cleaned.append((str(edge[0]), str(edge[1])))
+                elif len(edge) == 1:
+                    cleaned.append((str(edge[0]), str(edge[0])))
+            elif isinstance(edge, dict):
+                src = str(edge.get("from") or edge.get("source") or edge.get("src") or "")
+                tgt = str(edge.get("to") or edge.get("target") or edge.get("dst") or "")
+                if src or tgt:
+                    cleaned.append((src, tgt))
+        return cleaned
 
 
 class CodeBlockElement(_BaseElement):
@@ -196,6 +238,67 @@ class MindMapElement(_BaseElement):
     center: str
     branches: list[str]           # main branches
     sub_branches: Optional[dict[str, list[str]]] = None  # branch → sub-items
+
+    @field_validator("branches", mode="before")
+    @classmethod
+    def _clean_branches(cls, v: Any) -> list[str]:
+        if isinstance(v, str):
+            return [b.strip() for b in v.split(",") if b.strip()]
+        if isinstance(v, list):
+            cleaned = []
+            for item in v:
+                if isinstance(item, str):
+                    cleaned.append(item)
+                elif isinstance(item, dict):
+                    cleaned.append(str(item.get("name") or item.get("branch") or item))
+                else:
+                    cleaned.append(str(item))
+            return cleaned
+        return []
+
+    @field_validator("sub_branches", mode="before")
+    @classmethod
+    def _clean_sub_branches(cls, v: Any) -> Optional[dict[str, list[str]]]:
+        if not v:
+            return None
+        result: dict[str, list[str]] = {}
+        if isinstance(v, dict):
+            for key, val in v.items():
+                k_str = str(key)
+                if isinstance(val, list):
+                    result[k_str] = [str(x) for x in val]
+                elif isinstance(val, str):
+                    result[k_str] = [s.strip() for s in val.split(",") if s.strip()]
+                elif isinstance(val, dict):
+                    result[k_str] = [f"{sub_k}: {sub_v}" for sub_k, sub_v in val.items()]
+                else:
+                    result[k_str] = [str(val)]
+            return result
+        if isinstance(v, list):
+            for item in v:
+                if isinstance(item, dict):
+                    branch_name = (
+                        item.get("branch")
+                        or item.get("name")
+                        or item.get("topic")
+                        or "General"
+                    )
+                    subs = (
+                        item.get("sub_branches")
+                        or item.get("items")
+                        or item.get("children")
+                        or []
+                    )
+                    if isinstance(subs, list):
+                        result[str(branch_name)] = [str(x) for x in subs]
+                    elif isinstance(subs, str):
+                        result[str(branch_name)] = [s.strip() for s in subs.split(",") if s.strip()]
+                    else:
+                        result[str(branch_name)] = [str(subs)]
+                elif isinstance(item, str):
+                    result.setdefault("Subtopics", []).append(item)
+            return result if result else None
+        return None
 
 
 class SummaryElement(_BaseElement):
@@ -254,7 +357,7 @@ class NotebookPage(BaseModel):
     so the AI does NOT need to think about page breaks.
     The AI just groups elements by topic, not by page capacity.
     """
-    page_number: int
+    page_number: int = 1
     topic: str          # what section/topic this page covers
     elements: list[NotebookElement]
 
@@ -268,13 +371,13 @@ class NotebookPage(BaseModel):
 # ─────────────────────────────────────────────
 
 class NotebookMetadata(BaseModel):
-    title: str                  # derived from the lecture title
-    subject: Optional[str]      # e.g. "Data Structures", "Economics"
-    source_url: Optional[str]   # original YouTube URL
-    video_id: Optional[str]
+    title: str = "Lecture Notes"  # derived from the lecture title
+    subject: Optional[str] = None # e.g. "Data Structures", "Economics"
+    source_url: Optional[str] = None # original YouTube URL
+    video_id: Optional[str] = None
     style: NoteStyle = NoteStyle.DETAILED
-    total_pages: int            # filled after rendering, not by the AI
-    created_at: Optional[str]   # ISO timestamp
+    total_pages: int = 0          # calculated by server / renderer
+    created_at: Optional[str] = None # ISO timestamp
 
 
 # ─────────────────────────────────────────────

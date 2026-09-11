@@ -110,7 +110,10 @@ class Settings(BaseSettings):
     bucket and to mint signed download URLs.
     """
 
-    storage_bucket: str = Field(default="notebook-pdfs")
+    storage_bucket: str = Field(
+        default="Notes",
+        validation_alias=AliasChoices("storage_bucket", "supabase_storage_bucket"),
+    )
     """Private bucket holding generated PDFs, keyed <user_id>/<notebook_id>.pdf."""
 
     # ── Input limits ──────────────────────────────────────────────────────────
@@ -126,11 +129,15 @@ class Settings(BaseSettings):
 
     max_transcript_chars: int = Field(default=400_000)
     """
-    Above this, refuse. The chunker will happily split a 400k-character
-    transcript into ~100 chunks and then make ~100 sequential Groq calls, which
-    is a request that cannot finish inside any sane timeout and burns the API
-    quota on the way to failing.
+    Above this, refuse.
     """
+
+    single_call_word_threshold: int = Field(default=12_000)
+    """
+    Transcripts with fewer words than this will be generated in ONE single LLM call.
+    Only transcripts exceeding this threshold will undergo chunking.
+    """
+
 
     # ── HTTP ──────────────────────────────────────────────────────────────────
 

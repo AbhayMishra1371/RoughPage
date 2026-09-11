@@ -1,0 +1,143 @@
+{
+  "metadata": {
+    "title": "Data Structures",
+    "subject": "Data Structures",
+    "source_url": null,
+    "video_id": null,
+    "style": "detailed",
+    "total_pages": 1,
+    "created_at": "2026-09-11T14:00:14.741958+00:00"
+  },
+  "pages": [
+    {
+      "page_number": 1,
+      "topic": "Binary Search Trees",
+      "elements": [
+        {
+          "importance": "low",
+          "type": "heading",
+          "text": "Binary Search Trees",
+          "level": 1
+        },
+        {
+          "importance": "medium",
+          "type": "definition",
+          "term": "Binary Search Tree",
+          "meaning": "A node-based binary tree data structure with the following properties:",
+          "example": null
+        },
+        {
+          "importance": "medium",
+          "type": "bullet_list",
+          "title": "Properties",
+          "items": [
+            "The left subtree of a node contains only nodes with keys lesser than the node's key.",
+            "The right subtree of a node contains only nodes with keys greater than the node's key.",
+            "The left and right subtree each must also be a binary search tree."
+          ]
+        },
+        {
+          "importance": "high",
+          "type": "paragraph",
+          "text": "Search time complexity in a balanced BST is O(log n)."
+        },
+        {
+          "importance": "medium",
+          "type": "definition",
+          "term": "Balanced BST",
+          "meaning": "A binary search tree where the height of the left and right subtrees of every node differs by at most one.",
+          "example": null
+        },
+        {
+          "importance": "high",
+          "type": "sticky_formula",
+          "label": "Time Complexity",
+          "formula": "O(log n)",
+          "is_latex": false
+        },
+        {
+          "importance": "medium",
+          "type": "flowchart",
+          "title": "Search Algorithm",
+          "steps": [
+            "Start at the root node",
+            "Compare the target key with the root node's key",
+            "If the target key is less than the root node's key, go left",
+            "If the target key is greater than the root node's key, go right",
+            "If the target key is equal to the root node's key, return the node",
+            "If the target key is not found, return null"
+          ]
+        },
+        {
+          "importance": "high",
+          "type": "important_note",
+          "text": "To maintain the BST property, insertions and deletions must be done in a way that preserves the BST property."
+        },
+        {
+          "importance": "medium",
+          "type": "definition",
+          "term": "Insertion",
+          "meaning": "The process of adding a new node to the BST.",
+          "example": null
+        },
+        {
+          "importance": "medium",
+          "type": "definition",
+          "term": "Deletion",
+          "meaning": "The process of removing a node from the BST.",
+          "example": null
+        },
+        {
+          "importance": "medium",
+          "type": "flowchart",
+          "title": "Insertion Algorithm",
+          "steps": [
+            "Start at the root node",
+            "Compare the new node's key with the root node's key",
+            "If the new node's key is less than the root node's key, go left",
+            "If the new node's key is greater than the root node's key, go right",
+            "If the new node's key is equal to the root node's key, update the node's value",
+            "If the new node's key is not found, insert the new node as a leaf node"
+          ]
+        },
+        {
+          "importance": "medium",
+          "type": "flowchart",
+          "title": "Deletion Algorithm",
+          "steps": [
+            "Start at the node to be deleted",
+            "If the node has no children, delete the node",
+            "If the node has one child, replace the node with its child",
+            "If the node has two children, find the node's in-order successor or predecessor and replace the node with it"
+          ]
+        },
+        {
+          "importance": "medium",
+          "type": "comparison",
+          "title": "BST vs Heap",
+          "left_label": "Binary Search Tree",
+          "right_label": "Heap",
+          "rows": [
+            [
+              "Ordered nodes",
+              "Unordered nodes"
+            ],
+            [
+              "Search time complexity: O(log n)",
+              "Search time complexity: O(1)"
+            ]
+          ]
+        },
+        {
+          "importance": "medium",
+          "type": "summary",
+          "points": [
+            "A binary search tree is a node-based binary tree data structure with the following properties: the left subtree of a node contains only nodes with keys lesser than the node's key, the right subtree of a node contains only nodes with keys greater than the node's key, and the left and right subtree each must also be a binary search tree.",
+            "Search time complexity in a balanced BST is O(log n).",
+            "To maintain the BST property, insertions and deletions must be done in a way that preserves the BST property."
+          ]
+        }
+      ]
+    }
+  ]
+}

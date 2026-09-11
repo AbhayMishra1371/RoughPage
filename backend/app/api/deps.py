@@ -52,9 +52,10 @@ class AuthContext:
 
 async def get_current_auth(
     credentials: HTTPAuthorizationCredentials | None = Depends(_bearer),
+    token: str | None = None,
 ) -> AuthContext:
     """
-    Bearer token → AuthContext (user_id and raw token). 401/503 otherwise.
+    Bearer token or query param token → AuthContext (user_id and raw token). 401/503 otherwise.
     """
     global _warned_once
 
@@ -67,18 +68,19 @@ async def get_current_auth(
             _warned_once = True
         return AuthContext(user_id="dev-anonymous", token=None)
 
-    if credentials is None or not credentials.credentials:
+    raw_token = (credentials.credentials if credentials and credentials.credentials else token)
+    if not raw_token:
         raise HTTPException(
             status.HTTP_401_UNAUTHORIZED,
-            detail="Missing Authorization header.",
+            detail="Missing Authorization header or token parameter.",
             headers={"WWW-Authenticate": "Bearer"},
         )
 
-    token = credentials.credentials
+    token_str = raw_token
     try:
-        signing_key = _jwk_client().get_signing_key_from_jwt(token)
+        signing_key = _jwk_client().get_signing_key_from_jwt(token_str)
         claims = jwt.decode(
-            token,
+            token_str,
             signing_key.key,
             algorithms=["ES256", "RS256"],
             audience="authenticated",
@@ -96,7 +98,7 @@ async def get_current_auth(
     if not sub:
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, detail="Token has no subject.")
 
-    return AuthContext(user_id=str(sub), token=token)
+    return AuthContext(user_id=str(sub), token=token_str)
 
 
 async def get_current_user(

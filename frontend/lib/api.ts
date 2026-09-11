@@ -52,6 +52,15 @@ export async function saveNotebook(document: NotebookDocument) {
   return (await res.json()) as NotebookSummary;
 }
 
+export interface NotebookDetail extends NotebookSummary {
+  document: NotebookDocument;
+}
+
+export async function getNotebook(id: string): Promise<NotebookDetail> {
+  const res = await apiFetch(`/notebooks/${id}`);
+  return (await res.json()) as NotebookDetail;
+}
+
 export async function listNotebooks(): Promise<NotebookSummary[]> {
   const res = await apiFetch("/notebooks");
   return (await res.json()) as NotebookSummary[];
@@ -65,4 +74,56 @@ export async function getPdfUrl(id: string): Promise<string> {
   const res = await apiFetch(`/notebooks/${id}/pdf-url`);
   const { url } = (await res.json()) as { url: string };
   return url;
+}
+
+export async function downloadNotebookPdfById(notebookId: string, title?: string): Promise<void> {
+  const token = await getAccessToken();
+  const res = await fetch(`${API_BASE}/notebooks/${notebookId}/pdf`, {
+    headers: {
+      Authorization: `Bearer ${token ?? ""}`,
+    },
+  });
+  if (!res.ok) {
+    // Fallback to getPdfUrl if storage is configured
+    try {
+      const signedUrl = await getPdfUrl(notebookId);
+      window.open(signedUrl, "_blank");
+      return;
+    } catch {
+      throw new Error(`PDF generation failed: ${res.statusText}`);
+    }
+  }
+  const blob = await res.blob();
+  const url = window.URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `${title || "notebook"}.pdf`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  window.URL.revokeObjectURL(url);
+}
+
+export async function downloadNotebookPdf(doc: NotebookDocument, filename?: string): Promise<void> {
+  const token = await getAccessToken();
+  const res = await fetch(`${API_BASE}/export`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token ?? ""}`,
+    },
+    body: JSON.stringify({ document: doc, filename }),
+  });
+  if (!res.ok) {
+    throw new Error(`Export failed: ${res.statusText}`);
+  }
+  const blob = await res.blob();
+  const url = window.URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `${filename || doc.metadata?.title || "notebook"}.pdf`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  window.URL.revokeObjectURL(url);
 }
