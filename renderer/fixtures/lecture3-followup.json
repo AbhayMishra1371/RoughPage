@@ -1,0 +1,226 @@
+{
+  "metadata": {
+    "title": "Lecture 3 Follow-up Question Solution",
+    "subject": "Dynamic Programming",
+    "source_url": null,
+    "video_id": null,
+    "style": "detailed",
+    "total_pages": 9,
+    "created_at": "2026-09-11T14:26:22.000000+00:00"
+  },
+  "pages": [
+    {
+      "page_number": 1,
+      "topic": "Introduction",
+      "elements": [
+        {
+          "importance": "high",
+          "type": "heading",
+          "text": "Lecture 3 Follow-up Question Solution",
+          "level": 1
+        },
+        {
+          "importance": "medium",
+          "type": "paragraph",
+          "text": "In this lecture follow-up, we explore the generalized frog jump problem with variable jump size k, transitioning from recursive relations to optimized dynamic programming solutions."
+        }
+      ]
+    },
+    {
+      "page_number": 2,
+      "topic": "Problem Statement",
+      "elements": [
+        {
+          "importance": "high",
+          "type": "heading",
+          "text": "Problem Statement",
+          "level": 1
+        },
+        {
+          "importance": "medium",
+          "type": "definition",
+          "term": "Minimum Energy",
+          "meaning": "The minimum energy required for the frog to jump from the 0th index to the (n-1)th index.",
+          "example": null
+        },
+        {
+          "importance": "medium",
+          "type": "paragraph",
+          "text": "In Lecture 3, we were given a follow-up question where we had to find the minimum energy required for a frog to jump from the 0th index to the (n-1)th index, where the frog can jump from the ith index to i+1 and from i+1 to i+2."
+        }
+      ]
+    },
+    {
+      "page_number": 3,
+      "topic": "Recurrence Relation",
+      "elements": [
+        {
+          "importance": "high",
+          "type": "heading",
+          "text": "Recurrence Relation",
+          "level": 1
+        },
+        {
+          "importance": "high",
+          "type": "paragraph",
+          "text": "The recurrence relation for this problem is f(i) = min(f(i-1) + |a[i] - a[i-1]|, f(i-2) + |a[i] - a[i-2]|)."
+        },
+        {
+          "importance": "high",
+          "type": "sticky_formula",
+          "label": "Base Recurrence",
+          "formula": "f(i) = \\min(f(i-1) + |a_i - a_{i-1}|, f(i-2) + |a_i - a_{i-2}|)",
+          "is_latex": true
+        }
+      ]
+    },
+    {
+      "page_number": 4,
+      "topic": "Generalizing the Recurrence Relation",
+      "elements": [
+        {
+          "importance": "high",
+          "type": "heading",
+          "text": "Generalizing the Recurrence Relation",
+          "level": 1
+        },
+        {
+          "importance": "medium",
+          "type": "definition",
+          "term": "Generalized Recurrence Relation",
+          "meaning": "The recurrence relation for the frog to jump from the ith index to i+k, where k is a variable jump capacity.",
+          "example": null
+        },
+        {
+          "importance": "medium",
+          "type": "paragraph",
+          "text": "We can generalize the recurrence relation to allow the frog to jump from the ith index up to i+k, where k is any integer step up to the maximum jump limit."
+        }
+      ]
+    },
+    {
+      "page_number": 5,
+      "topic": "Converting to a For Loop",
+      "elements": [
+        {
+          "importance": "high",
+          "type": "heading",
+          "text": "Converting to a For Loop",
+          "level": 1
+        },
+        {
+          "importance": "medium",
+          "type": "paragraph",
+          "text": "We can convert the recurrence relation to a for loop, where we iterate from j = 1 to k and calculate the minimum energy required."
+        },
+        {
+          "importance": "high",
+          "type": "code_block",
+          "language": "pseudocode",
+          "code": "for j = 1 to k:\n    if i - j >= 0:\n        jump_energy = abs(a[i] - a[i - j])\n        min_energy = min(min_energy, f(i - j) + jump_energy)"
+        }
+      ]
+    },
+    {
+      "page_number": 6,
+      "topic": "Memoization",
+      "elements": [
+        {
+          "importance": "high",
+          "type": "heading",
+          "text": "Memoization",
+          "level": 1
+        },
+        {
+          "importance": "medium",
+          "type": "definition",
+          "term": "Memoization",
+          "meaning": "The technique of storing the minimum energy required for each index to reduce the time complexity of the solution.",
+          "example": null
+        },
+        {
+          "importance": "medium",
+          "type": "paragraph",
+          "text": "We can use memoization to store the minimum energy required for each index, which will reduce the time complexity from exponential to polynomial."
+        }
+      ]
+    },
+    {
+      "page_number": 7,
+      "topic": "Time and Space Complexity",
+      "elements": [
+        {
+          "importance": "high",
+          "type": "heading",
+          "text": "Time and Space Complexity",
+          "level": 1
+        },
+        {
+          "importance": "medium",
+          "type": "paragraph",
+          "text": "The time complexity of the solution is O(n * k), where n is the number of indices and k is the maximum number of jumps."
+        },
+        {
+          "importance": "high",
+          "type": "sticky_formula",
+          "label": "Complexity",
+          "formula": "T(n) = O(n \\times k), \\quad S(n) = O(n)",
+          "is_latex": true
+        }
+      ]
+    },
+    {
+      "page_number": 8,
+      "topic": "Space Optimization",
+      "elements": [
+        {
+          "importance": "high",
+          "type": "heading",
+          "text": "Space Optimization",
+          "level": 1
+        },
+        {
+          "importance": "medium",
+          "type": "definition",
+          "term": "Space Optimization",
+          "meaning": "The technique of reducing the auxiliary space complexity from O(n) to O(k).",
+          "example": null
+        },
+        {
+          "importance": "medium",
+          "type": "paragraph",
+          "text": "We can optimize the space complexity of the solution from O(n) to O(k), but it is not necessary if k is equal or close to n."
+        }
+      ]
+    },
+    {
+      "page_number": 9,
+      "topic": "Conclusion",
+      "elements": [
+        {
+          "importance": "high",
+          "type": "heading",
+          "text": "Conclusion",
+          "level": 1
+        },
+        {
+          "importance": "medium",
+          "type": "paragraph",
+          "text": "In conclusion, we have solved the follow-up question of Lecture 3, derived the recurrence relation, generalized it for k jumps, converted it to an iterative DP solution, and analyzed time and space bounds."
+        },
+        {
+          "importance": "medium",
+          "type": "summary",
+          "points": [
+            "Recurrence relation for frog jumping up to k steps",
+            "Generalized recurrence relation formula",
+            "Converting recurrence to a bounded for-loop",
+            "Memoization table to prevent overlapping subproblems",
+            "Time complexity O(n*k) and space bounds",
+            "Space optimization possibilities down to O(k)"
+          ]
+        }
+      ]
+    }
+  ]
+}

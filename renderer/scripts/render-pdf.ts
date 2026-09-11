@@ -48,11 +48,12 @@ interface Args {
 
 function parseArgs(argv: string[]): Args {
   const positional: string[] = [];
-  const out: Partial<Args> = { breakOnTopic: true, timeoutMs: 60_000, keepOpen: false };
+  const out: Partial<Args> = { breakOnTopic: false, timeoutMs: 60_000, keepOpen: false };
 
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i];
     if (a === '--url') out.url = argv[++i];
+    else if (a === '--topic-break') out.breakOnTopic = true;
     else if (a === '--no-topic-break') out.breakOnTopic = false;
     else if (a === '--timeout') out.timeoutMs = Number(argv[++i]) || 60_000;
     else if (a === '--keep-open') out.keepOpen = true;
@@ -63,7 +64,7 @@ function parseArgs(argv: string[]): Args {
   if (positional.length === 0) {
     fail(
       'usage: npm run render -- <input.json> [output.pdf] ' +
-        '[--url http://localhost:3210] [--no-topic-break] [--timeout ms]',
+        '[--url http://localhost:3210] [--topic-break] [--no-topic-break] [--timeout ms]',
     );
   }
 
@@ -409,6 +410,7 @@ async function main(): Promise<void> {
     const state = await page.evaluate(() => ({
       pages: window.__ROUGHPAGE_PAGES__ ?? 0,
       warnings: window.__ROUGHPAGE_WARNINGS__ ?? [],
+      stats: ((window as unknown as { __ROUGHPAGE_STATS__?: Array<{ used: number; available: number; utilization: number; elements: string[] }> }).__ROUGHPAGE_STATS__) ?? [],
       papers: document.querySelectorAll('.paper').length,
       // If the CSS failed to load, the ruled lines are gone and the PDF is a
       // sheet of blank white — which `printBackground` alone cannot tell you.
@@ -450,6 +452,14 @@ async function main(): Promise<void> {
     console.log(`  pages          ${state.papers} (reflowed from ${doc.pages.length} topic groups)`);
     if (declared !== undefined && declared !== state.papers) {
       console.log(`                 metadata.total_pages said ${declared} — ignored, as designed`);
+    }
+    if (state.stats.length > 0) {
+      console.log('  pagination:');
+      state.stats.forEach((s, i) => {
+        console.log(
+          `    Physical Page ${i + 1}: used ${s.used}px / ${s.available}px (${s.utilization.toFixed(1)}%) — [${s.elements.join(', ')}]`,
+        );
+      });
     }
     console.log(`  fonts          ${fonts.all.join(', ')}`);
     console.log(`  content hash   ${contentHash(pdf)}`);

@@ -49,67 +49,73 @@ export interface PlacedElement extends FlatElement {
   isContinuation?: boolean;
 }
 
+export interface PageStats {
+  used: number;
+  available: number;
+  utilization: number;
+  elements: string[];
+}
+
 export interface PhysicalPage {
   pageNumber: number;
   /** Shown in the page header — the topic the page opens with. */
   topic: string;
   items: PlacedElement[];
+  stats?: PageStats;
 }
 
 export interface PaginateOptions {
   /**
-   * Start each topic group on a fresh page. Default true.
+   * Start each topic group on a fresh page. Default false.
    *
-   * The composition rules guarantee every group opens with a heading and closes
-   * with a summary, so group boundaries are reliable. Starting a new topic on a
-   * new page is what students actually do, and it contains the duplicate-topic
-   * bleed caused by the 100-word chunk overlap on long transcripts.
+   * By default, topic sections flow continuously across physical pages so
+   * physical pages achieve high content utilization (~75-90%) instead of
+   * leaving 50-80% of the page blank.
    */
   breakOnTopic?: boolean;
   contentH?: number;
   /** Collects non-fatal layout complaints (oversized elements, etc.). */
   onWarn?: (message: string) => void;
+  /** Log per-page utilization stats to the console. Default true. */
+  debug?: boolean;
 }
 
 // ── Split policy ────────────────────────────────────────────────────────────
 
 /**
- * Never split.
+ * Atomic elements: kept together on a physical page whenever possible.
  *
- * Two different reasons, both ending in the same place:
- *   - `definition`, `important_note`, `sticky_formula` carry a drawn box or a
- *     rotated note, and a box cut in half reads unmistakably as a bug rather
- *     than as a student running out of room.
- *   - `diagram` and `mind_map` ARE their geometry. Half a diagram is not half as
- *     useful, it is useless; and a mind map without its hub is not a mind map.
- *   - `paragraph` and `example` could in principle be cut, but only at RENDERED
- *     line boundaries — where a wrap lands is a browser decision, not a data one,
- *     and the head/parts model below cannot express it. So prose moves whole.
- *
- * DOCUMENTATION AND AUDIT SOURCE, not a lookup: the algorithm treats anything
- * absent from SPLITTABLE as atomic, so this set never needs to be consulted to
- * be correct. It is exported so the grid audit can assert the two sets are
- * disjoint and that together they cover every implemented type.
+ * `definition`, `important_note`, `sticky_formula`, `comparison`, `flowchart`,
+ * `diagram`, `code_block`, `example`, `timeline`, `mind_map`, `screenshot`,
+ * `heading`, `paragraph`.
  */
 const ATOMIC = new Set([
   'definition',
   'important_note',
   'sticky_formula',
+  'comparison',
+  'flowchart',
+  'diagram',
+  'code_block',
+  'example',
+  'timeline',
+  'mind_map',
+  'screenshot',
   'heading',
   'paragraph',
-  'example',
-  'diagram',
-  'mind_map',
 ]);
 
 /**
- * Splittable at row boundaries.
- *
- * Every one of these renders a repeated `head` (a title, a language tag, a table
- * header) plus a list of independently-measured rows, and every one of them
- * survives being cut between two rows: the comparison table draws its frame per
- * row, the timeline draws its spine per event, and a flowchart's connector arrow
- * belongs to the step ABOVE it so a fragment ends on a closed box.
+ * Splittable during inline packing: only row-based lists whose items are
+ * independently readable and cleanly breakable across page boundaries.
+ */
+const SPLITTABLE_INLINE = new Set([
+  'bullet_list',
+  'summary',
+]);
+
+/**
+ * All elements that have row structure (can split in an emergency if taller than a whole page).
  */
 const SPLITTABLE = new Set([
   'bullet_list',
@@ -127,23 +133,13 @@ const MIN_ROWS_PER_FRAGMENT = 2;
 const ORPHAN_MIN = 2 * LINE_H;
 
 function isSplittable(el: NotebookElement, m: Measured): boolean {
-  return SPLITTABLE.has(el.type) && m.parts.length >= MIN_ROWS_PER_FRAGMENT * 2;
+  return SPLITTABLE_INLINE.has(el.type) && m.parts.length >= MIN_ROWS_PER_FRAGMENT * 2;
 }
 
 // ── Row access ──────────────────────────────────────────────────────────────
 
 /**
  * The rows of a splittable element, whatever its type calls them.
- *
- * `unknown[]` rather than `string[]`: a comparison's rows are `[left, right]`
- * pairs and a timeline's events are objects. Nothing here inspects a row — only
- * `.length` and `.slice()` are ever used — so the element type is the only thing
- * that needs to know what a row actually is.
- *
- * THESE MUST AGREE WITH WHAT THE COMPONENT RENDERS. Where a component drops
- * empty rows, the filter is mirrored here. If the two ever disagree, the
- * `rows.length !== m.parts.length` guard in `splitToFit` refuses the split and
- * the element moves to the next page whole — a worse layout, never wrong output.
  */
 function rowsOf(el: NotebookElement): unknown[] {
   switch (el.type) {
@@ -156,12 +152,10 @@ function rowsOf(el: NotebookElement): unknown[] {
     case 'code_block':
       return String((el as { code?: string }).code ?? '').split('\n');
     case 'flowchart':
-      // Mirrors Flowchart.tsx, which drops blank steps.
       return ((el as { steps?: unknown[] }).steps ?? [])
         .map((s) => String(s ?? ''))
         .filter(Boolean);
     case 'timeline':
-      // Mirrors Timeline.tsx, which drops events with neither field.
       return ((el as { events?: { label?: unknown; description?: unknown }[] }).events ?? [])
         .filter(
           (e) => e && (String(e.label ?? '').trim() || String(e.description ?? '').trim()),
@@ -180,8 +174,6 @@ function withRows(el: NotebookElement, rows: unknown[]): NotebookElement {
     case 'comparison':
       return { ...el, rows } as NotebookElement;
     case 'code_block':
-      // Rejoined rather than kept as an array: `code` is a single string in the
-      // schema, and CodeBlock.tsx splits it again on render.
       return { ...el, code: rows.join('\n') } as NotebookElement;
     case 'flowchart':
       return { ...el, steps: rows } as NotebookElement;
@@ -204,11 +196,6 @@ interface Fragment {
 /**
  * Splits a splittable element so its head fragment fits in `avail`.
  * Returns null when no split respects MIN_ROWS_PER_FRAGMENT on both sides.
- *
- * Both fragments carry the SAME `head` height, because the head (a bullet_list
- * title, a summary's divider + label) is repeated on the continuation — which is
- * what a real student does. So the two fragments together are one `head` taller
- * than the original element, by design.
  */
 function splitToFit(
   item: FlatElement,
@@ -262,9 +249,10 @@ export function paginate(
   heights: HeightMap,
   opts: PaginateOptions = {},
 ): PhysicalPage[] {
-  const breakOnTopic = opts.breakOnTopic ?? true;
+  const breakOnTopic = opts.breakOnTopic ?? false;
   const contentH = opts.contentH ?? CONTENT_H;
   const warn = opts.onWarn ?? (() => {});
+  const debug = opts.debug ?? true;
 
   const pages: PhysicalPage[] = [];
   let current: PlacedElement[] = [];
@@ -273,7 +261,32 @@ export function paginate(
 
   const flush = () => {
     if (current.length === 0) return;
-    pages.push({ pageNumber: pages.length + 1, topic: currentTopic, items: current });
+    const pageNumber = pages.length + 1;
+    const elemTypes = current.map((p) => p.element.type);
+    const utilization = Math.round((used / contentH) * 1000) / 10;
+    const stats: PageStats = {
+      used,
+      available: contentH,
+      utilization,
+      elements: elemTypes,
+    };
+
+    if (debug) {
+      console.log(
+        `Physical Page ${pageNumber}:\n` +
+          `  Used: ${used}px\n` +
+          `  Available: ${contentH}px\n` +
+          `  Utilization: ${utilization.toFixed(1)}%\n` +
+          `  Elements: ${elemTypes.join(', ')}`,
+      );
+    }
+
+    pages.push({
+      pageNumber,
+      topic: currentTopic,
+      items: current,
+      stats,
+    });
     current = [];
     used = 0;
   };
@@ -305,27 +318,56 @@ export function paginate(
     const { item, measured, isContinuation } = queue.shift()!;
     const el = item.element;
     const h = snapToLine(measured.total);
-    // Threaded onto everything this fragment becomes: a tail that has to split
-    // again is still a continuation of the original element.
     const carry: Partial<PlacedElement> = isContinuation ? { isContinuation: true } : {};
 
-    // New topic starts a new page.
-    if (breakOnTopic && item.startsTopic && current.length > 0) flush();
-
-    // Don't leave a heading stranded at the foot of a page.
-    if (el.type === 'heading' && current.length > 0 && used + h + ORPHAN_MIN > contentH) {
+    // 1. Explicit breakOnTopic option (if caller explicitly requests topic isolation)
+    if (breakOnTopic && item.startsTopic && current.length > 0) {
       flush();
+    }
+
+    // 2. Look-ahead for section transitions:
+    // If starting a new topic section on an existing page, look ahead to ensure
+    // there is enough vertical room for the section to breathe (heading + content).
+    if (!breakOnTopic && item.startsTopic && current.length > 0) {
+      let lookaheadNeeded = h + 3 * LINE_H; // heading + at least 3 lines of follower room
+      if (queue.length > 0) {
+        const nextH = snapToLine(queue[0].measured.total);
+        if (nextH <= 6 * LINE_H) {
+          lookaheadNeeded = h + nextH;
+        }
+      }
+      if (used + lookaheadNeeded > contentH) {
+        flush();
+      }
+    }
+
+    // 3. Heading orphan prevention:
+    // A heading must never be stranded at the foot of a page without body content.
+    if (el.type === 'heading' && current.length > 0) {
+      let lookaheadNeeded = h + ORPHAN_MIN;
+      if (queue.length > 0) {
+        const nextH = snapToLine(queue[0].measured.total);
+        if (nextH <= 4 * LINE_H) {
+          lookaheadNeeded = h + nextH;
+        }
+      }
+      if (used + lookaheadNeeded > contentH) {
+        flush();
+      }
     }
 
     const avail = contentH - used;
 
+    // 4. Fits within available space on current page
     if (h <= avail) {
       place(item, h, carry);
       continue;
     }
 
-    // Doesn't fit in what's left. Try splitting into the remaining space.
-    if (isSplittable(el, measured) && avail >= LINE_H * 2) {
+    // 5. Doesn't fit in remaining space.
+    // Try splitting ONLY if the element is in SPLITTABLE_INLINE (bullet_list, summary)
+    // and there is enough room for at least MIN_ROWS_PER_FRAGMENT on both sides.
+    if (isSplittable(el, measured) && avail >= LINE_H * 3) {
       const parts = splitToFit(item, measured, avail);
       if (parts) {
         place(parts[0].item, snapToLine(parts[0].measured.total), carry);
@@ -335,15 +377,17 @@ export function paginate(
       }
     }
 
-    // Move it to a fresh page.
+    // 6. Move element whole to a fresh page if current page already has content
     if (current.length > 0) {
       flush();
       queue.unshift({ item: { ...item, startsTopic: false }, measured, isContinuation });
       continue;
     }
 
-    // Already alone on a fresh page and STILL too tall.
-    if (isSplittable(el, measured)) {
+    // 7. Already alone on a fresh page and STILL too tall:
+    // If it has row structure (code_block, comparison, flowchart, timeline, bullet_list, summary),
+    // try splitting across pages to avoid unreadable downscaling.
+    if (rowsOf(el).length >= MIN_ROWS_PER_FRAGMENT * 2 && measured.parts.length >= MIN_ROWS_PER_FRAGMENT * 2) {
       const parts = splitToFit(item, measured, contentH);
       if (parts) {
         place(parts[0].item, snapToLine(parts[0].measured.total), carry);
@@ -353,7 +397,7 @@ export function paginate(
       }
     }
 
-    // Atomic and taller than a whole page: shrink it rather than clip or crash.
+    // 8. Atomic and taller than a whole page: shrink it rather than clip or crash.
     const scale = Math.max(0.55, contentH / measured.total);
     warn(
       `paginate: <${el.type}> is ${Math.round(measured.total)}px, taller than a page ` +

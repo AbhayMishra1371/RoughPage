@@ -244,13 +244,13 @@ def safe_filename(name: str | None, fallback: str = "notebook") -> str:
     return f"{(stem or fallback)[:80]}.pdf"
 
 
-async def export_pdf(document: dict, *, break_on_topic: bool = True) -> ExportResult:
+async def export_pdf(document: dict, *, break_on_topic: bool = False) -> ExportResult:
     """
     Render `document` and return the PDF bytes.
 
     Args:
         document:       A NotebookDocument as a plain dict (model_dump(mode="json")).
-        break_on_topic: Passed to the renderer as --no-topic-break when False.
+        break_on_topic: Passed to the renderer as --topic-break when True.
 
     Raises:
         ExportError — the renderer is not installed, the render timed out, or the
@@ -282,7 +282,9 @@ async def export_pdf(document: dict, *, break_on_topic: bool = True) -> ExportRe
         "--timeout",
         str(settings.export_timeout_s * 1000),
     ]
-    if not break_on_topic:
+    if break_on_topic:
+        argv.append("--topic-break")
+    else:
         argv.append("--no-topic-break")
     if settings.renderer_url:
         argv += ["--url", settings.renderer_url]

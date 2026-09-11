@@ -177,7 +177,7 @@ export interface RenderStatus {
 
 export interface NotebookRendererProps {
   doc: NotebookDocument;
-  /** Start each topic group on a fresh page. Default true. */
+  /** Start each topic group on a fresh page. Default false. */
   breakOnTopic?: boolean;
   /** Screen-only page shadow. The PDF path turns this off. */
   shadow?: boolean;
@@ -188,7 +188,7 @@ export interface NotebookRendererProps {
 
 export default function NotebookRenderer({
   doc,
-  breakOnTopic = true,
+  breakOnTopic = false,
   shadow = true,
   signalReady = true,
   onStatus,
@@ -229,6 +229,7 @@ export default function NotebookRenderer({
       window.__ROUGHPAGE_READY__ = false;
       window.__ROUGHPAGE_PAGES__ = 0;
       window.__ROUGHPAGE_WARNINGS__ = [];
+      (window as unknown as { __ROUGHPAGE_STATS__?: unknown[] }).__ROUGHPAGE_STATS__ = [];
     }
   }, [doc]);
 
@@ -258,10 +259,13 @@ export default function NotebookRenderer({
       onWarn: (m) => collected.push(m),
     });
 
+    const pageStats = result.map((p) => p.stats).filter(Boolean);
+
     warnings.current = collected;
     if (typeof window !== 'undefined') {
       window.__ROUGHPAGE_WARNINGS__ = collected;
       window.__ROUGHPAGE_PAGES__ = result.length;
+      (window as unknown as { __ROUGHPAGE_STATS__?: unknown[] }).__ROUGHPAGE_STATS__ = pageStats;
     }
     for (const w of collected) console.warn(w);
 
