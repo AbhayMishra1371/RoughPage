@@ -94,12 +94,12 @@ client = OpenAI(
 
 logger = logging.getLogger(__name__)
 
-LLM_MODEL = os.getenv("NVIDIA_MODEL", "meta/llama-3.2-11b-vision-instruct")
+LLM_MODEL = os.getenv("NVIDIA_MODEL", "deepseek-ai/deepseek-v4-flash")
 MAX_RETRIES = 1
 
 FALLBACK_MODELS = [
     LLM_MODEL,
-    os.getenv("NVIDIA_FALLBACK_MODEL", "minimaxai/minimax-m3"),
+    os.getenv("NVIDIA_FALLBACK_MODEL", "deepseek-ai/deepseek-v4-flash"),
 ]
 
 # Deduplicate while preserving order
@@ -369,7 +369,7 @@ def _extract_knowledge_for_chunk(
 # Python Document Sanitizer & Assembler
 # ─────────────────────────────────────────────
 
-def _extract_text(val: Any) -> str:
+def _extract_text(val: any) -> str:
     """Recursively unpacks clean string text even if the LLM wraps it in a dict or nested structure."""
     if val is None:
         return ""
@@ -385,7 +385,7 @@ def _extract_text(val: Any) -> str:
     return str(val).strip()
 
 
-def _clean_comparison_row(row: Any) -> tuple[str, str] | None:
+def _clean_comparison_row(row: any) -> tuple[str, str] | None:
     """Normalizes various LLM comparison row formats into (left_text, right_text)."""
     if isinstance(row, (list, tuple)):
         # Handle [ "row", [ {text: "A"}, {text: "B"} ] ]
