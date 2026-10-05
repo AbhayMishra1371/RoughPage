@@ -19,7 +19,15 @@
       }
     ],
     "paths": {
-      "@/*": ["./*"]
+      "@/*": ["./*"],
+      "@/lib/geometry": ["./lib/renderer/geometry"],
+      "@/lib/latex": ["./lib/renderer/latex"],
+      "@/lib/paginate": ["./lib/renderer/paginate"],
+      "@/lib/rng": ["./lib/renderer/rng"],
+      "@/lib/roughShapes": ["./lib/renderer/roughShapes"],
+      "@/lib/handwriting": ["./lib/renderer/handwriting"],
+      "@/lib/graphLayout": ["./lib/renderer/graphLayout"],
+      "@/lib/useBoxSize": ["./lib/renderer/useBoxSize"]
     }
   },
   "include": [

@@ -1,5 +1,10 @@
 import type { Metadata } from "next";
 import { Inter, JetBrains_Mono, Kalam, Playfair_Display } from "next/font/google";
+import "@fontsource/kalam/300.css";
+import "@fontsource/kalam/400.css";
+import "@fontsource/kalam/700.css";
+import "@fontsource/jetbrains-mono/400.css";
+import "katex/dist/katex.min.css";
 import "./globals.css";
 import NavBar from "@/components/NavBar";
 

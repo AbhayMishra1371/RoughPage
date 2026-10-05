@@ -1,30 +1,8 @@
-/** Shared types mirroring backend/app/schemas. */
+/**
+ * types.ts
+ * ========
+ * Unified NotebookDocument types for the frontend, re-exporting the full
+ * schema and helpers from the renderer core.
+ */
 
-export type NoteStyle = "detailed" | "topper" | "last_minute";
-
-export interface NotebookMetadata {
-  title: string;
-  subject?: string | null;
-  source_url?: string | null;
-  video_id?: string | null;
-  style: NoteStyle;
-  total_pages: number;
-  created_at: string;
-}
-
-export interface NotebookElement {
-  type: string;
-  importance?: "high" | "medium" | "low";
-  [key: string]: unknown;
-}
-
-export interface NotebookPage {
-  page_number: number;
-  topic: string;
-  elements: NotebookElement[];
-}
-
-export interface NotebookDocument {
-  metadata: NotebookMetadata;
-  pages: NotebookPage[];
-}
+export * from "./renderer/types";
