@@ -202,18 +202,28 @@ class ExtractedFlowchart(BaseModel):
     source_segments: list[str] = Field(default_factory=list)
 
 
+class DiagramEdge(BaseModel):
+    source: str
+    target: str
+    label: Optional[str] = None
+
+
 class ExtractedDiagram(BaseModel):
     title: Optional[str] = None
     nodes: list[str] = Field(default_factory=list)
-    edges: list[tuple[str, str]] = Field(default_factory=list)
-    edge_labels: Optional[list[str]] = None
+    edges: list[DiagramEdge] = Field(default_factory=list)
     source_segments: list[str] = Field(default_factory=list)
+
+
+class MindMapBranch(BaseModel):
+    name: str
+    sub_items: list[str] = Field(default_factory=list)
 
 
 class ExtractedMindMap(BaseModel):
     center: str
     branches: list[str] = Field(default_factory=list)
-    sub_branches: Optional[dict[str, list[str]]] = None
+    sub_branches: list[MindMapBranch] = Field(default_factory=list)
     source_segments: list[str] = Field(default_factory=list)
 
 
@@ -225,17 +235,27 @@ class VisualKnowledge(BaseModel):
     mindmaps: list[ExtractedMindMap] = Field(default_factory=list)
 
 
+class ComparisonRow(BaseModel):
+    left: str
+    right: str
+
+
 class ExtractedComparison(BaseModel):
     title: str
     left_label: str
     right_label: str
-    rows: list[tuple[str, str]] = Field(default_factory=list)
+    rows: list[ComparisonRow] = Field(default_factory=list)
     source_segments: list[str] = Field(default_factory=list)
+
+
+class TimelineEvent(BaseModel):
+    label: str
+    description: str
 
 
 class ExtractedTimeline(BaseModel):
     title: Optional[str] = None
-    events: list[dict[str, str]] = Field(default_factory=list)  # [{"label": "...", "description": "..."}]
+    events: list[TimelineEvent] = Field(default_factory=list)
     source_segments: list[str] = Field(default_factory=list)
 
 
