@@ -18,4 +18,9 @@ uvicorn
 openai
 sqlalchemy
 pyjwt[crypto]
+google-genai
+groq
+langgraph
+langchain
+tiktoken
 
