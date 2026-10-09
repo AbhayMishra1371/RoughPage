@@ -17,8 +17,11 @@ def clean_transcript_basic(raw_transcript: Optional[List[Dict[str, any]]]) -> st
 
     cleaned_segments = []
     
-    # Regular expression to match bracketed annotations: [Music], [laughter], (music), etc.
-    annotation_pattern = re.compile(r'\[[^\]]+\]|\([^)]+\)')
+    # Regular expression to match audio noise annotations without stripping math parentheses: (theta), O(log n)
+    annotation_pattern = re.compile(
+        r"\[[^\]]+\]|\((?:music|applause|laughter|cough|sigh|cheers|screaming|snicker|giggle|groan|chuckle)\)",
+        re.IGNORECASE,
+    )
 
     for segment in raw_transcript:
         # Extract text safely from dictionary or object attributes

@@ -19,8 +19,11 @@ from typing import Any, Sequence
 
 from app.schemas.pipeline import SegmentedTranscript, TranscriptSegment
 
-# Pattern to clean bracketed noise from audio transcription
-_ANNOTATION_PATTERN = re.compile(r"\[[^\]]+\]|\([^)]+\)")
+# Pattern to clean bracketed noise from audio transcription while preserving math parentheses like (theta), (log n)
+_ANNOTATION_PATTERN = re.compile(
+    r"\[[^\]]+\]|\((?:music|applause|laughter|cough|sigh|cheers|screaming|snicker|giggle|groan|chuckle)\)",
+    re.IGNORECASE,
+)
 
 
 def clean_segment_text(raw_text: str) -> str:
