@@ -846,100 +846,138 @@ def generate_notebook(
         ValueError — if generation fails after all retries.
     """
     word_count = len(transcript.split())
+    logger.info(f"[generate_notebook] Initiating LangGraph pipeline ({word_count:,} words)...")
 
-    # ── Single-call path for normal transcripts ───────────────────────────────
-    if not needs_chunking(transcript):
-        logger.info(
-            f"Transcript has {word_count:,} words (under threshold) — "
-            "processing in ONE direct LLM call."
-        )
-        _emit(
-            on_progress,
-            "starting",
-            f"Processing lecture ({word_count:,} words) in a single pass",
-            0,
-            1,
-        )
-        notebook = _generate_single_notebook(
-            transcript  = transcript,
-            style       = style,
-            subject     = subject,
-            source_url  = source_url,
-            video_id    = video_id,
-            title       = title,
-            on_progress = on_progress,
-        )
-        element_count = sum(len(p.elements) for p in notebook.pages)
-        logger.info(
-            f"Done — {notebook.metadata.total_pages} page(s), "
-            f"{element_count} element(s)."
-        )
-        _emit(
-            on_progress,
-            "done",
-            f"{len(notebook.pages)} topic group"
-            f"{'' if len(notebook.pages) == 1 else 's'}, {element_count} elements",
-            1,
-            1,
-        )
-        return notebook
+    from app.services.ai.graph.graph import pipeline_graph
+    from app.services.ai.graph.nodes.planner import synthesize_fallback_document
+    from app.services.transcript.segmenter import segment_transcript
 
-    # ── Multi-chunk architecture path for massive transcripts (>12k words) ────
-    # Follows: N Extraction calls + Python Merger + 1 Notebook Planner call
-    logger.info(f"Massive transcript ({word_count:,} words) — chunking into segments.")
-    chunks = chunk_by_word_count(transcript)
-    total_chunks = len(chunks)
-    total_steps = total_chunks + 1  # N extraction steps + 1 planning step
-    logger.info(f"Total chunks: {total_chunks}")
+    segmented = segment_transcript(transcript)
+    segments = segmented.segments
+    total_segments = len(segments)
+
     _emit(
         on_progress,
-        "chunking",
-        f"Split the lecture into {total_chunks} sections for knowledge extraction",
-        0,
-        total_steps,
+        "segmenting",
+        f"Segmented lecture into {total_segments} structured section(s)",
+        1,
+        5,
     )
 
-    # Step 1: N Knowledge Extraction calls (strictly extracts knowledge, no pages)
-    all_knowledge_chunks: list[dict] = []
-    for chunk in chunks:
-        extracted = _extract_knowledge_for_chunk(chunk, on_progress=on_progress)
-        all_knowledge_chunks.append(extracted)
+    initial_state = {
+        "raw_transcript": transcript,
+        "segments": segments,
+        "source_url": source_url,
+        "video_id": video_id,
+        "style": style,
+        "subject": subject,
+        "title": title,
+        "routing": None,
+        "text_result": None,
+        "formula_result": None,
+        "visual_result": None,
+        "comparison_result": None,
+        "errors": [],
+        "merged_knowledge": None,
+        "validation_passed": False,
+        "notebook_document": None,
+    }
 
-    # Step 2: Python Knowledge Merger (deduplication & unification, 0 LLM calls)
-    _emit(
-        on_progress,
-        "merging",
-        "Deduplicating and unifying knowledge across all sections",
-        total_chunks,
-        total_steps,
-    )
-    unified_knowledge = merge_knowledge(all_knowledge_chunks)
+    doc: NotebookDocument | None = None
+    merged_knowledge = None
 
-    # Step 3: ONE Notebook Planner call from unified knowledge
-    notebook = _plan_notebook_from_knowledge(
-        knowledge    = unified_knowledge,
-        style        = style,
-        subject      = subject,
-        source_url   = source_url,
-        video_id     = video_id,
-        title        = title,
-        on_progress  = on_progress,
-        current_step = total_steps,
-        total_steps  = total_steps,
-    )
+    try:
+        for update_dict in pipeline_graph.stream(initial_state, stream_mode="updates"):
+            for node_name, node_output in update_dict.items():
+                if node_name == "analyzer":
+                    routing = node_output.get("routing")
+                    active = []
+                    if routing:
+                        if routing.text and routing.text.required:
+                            active.append("Text")
+                        if routing.formula and routing.formula.required:
+                            active.append("Formula")
+                        if routing.visual and routing.visual.required:
+                            active.append("Visual")
+                        if routing.comparison and routing.comparison.required:
+                            active.append("Comparison")
+                    active_desc = ", ".join(active) if active else "General Text"
+                    _emit(
+                        on_progress,
+                        "analyzing",
+                        f"Analyzed lecture structure — activating specialists: {active_desc}",
+                        2,
+                        5,
+                    )
 
-    element_count = sum(len(p.elements) for p in notebook.pages)
+                elif node_name in ("text_specialist", "formula_specialist", "visual_specialist", "comparison_specialist"):
+                    specialist_title = node_name.replace("_specialist", "").title()
+                    _emit(
+                        on_progress,
+                        "extracting",
+                        f"Extracting specialist knowledge: {specialist_title} Specialist",
+                        3,
+                        5,
+                    )
+
+                elif node_name == "merger":
+                    merged_knowledge = node_output.get("merged_knowledge")
+                    c_count = len(merged_knowledge.concepts) if merged_knowledge else 0
+                    _emit(
+                        on_progress,
+                        "merging",
+                        f"Consolidated and unified lecture knowledge ({c_count} core concepts)",
+                        4,
+                        5,
+                    )
+
+                elif node_name == "validator":
+                    _emit(
+                        on_progress,
+                        "validating",
+                        "Validated source citations and diagram integrity against transcript",
+                        4,
+                        5,
+                    )
+
+                elif node_name == "planner":
+                    doc = node_output.get("notebook_document")
+                    page_count = len(doc.pages) if doc else 1
+                    _emit(
+                        on_progress,
+                        "planning",
+                        f"Planned and structured {page_count} notebook page(s)",
+                        5,
+                        5,
+                    )
+
+    except Exception as e:
+        logger.error(f"[generate_notebook] LangGraph execution error: {e}")
+        if merged_knowledge:
+            logger.warning("[generate_notebook] Synthesizing emergency fallback document from merged knowledge.")
+            doc = synthesize_fallback_document(
+                knowledge=merged_knowledge,
+                style=style,
+                subject=subject,
+                source_url=source_url,
+                video_id=video_id,
+                title=title,
+            )
+        else:
+            raise ValueError(f"Notebook generation failed: {e}") from e
+
+    if doc is None:
+        raise ValueError("LangGraph pipeline finished without producing a NotebookDocument.")
+
+    element_count = sum(len(p.elements) for p in doc.pages)
     logger.info(
-        f"Done — {notebook.metadata.total_pages} page(s), "
-        f"{element_count} element(s)."
+        f"[generate_notebook] Finished successfully — {len(doc.pages)} page(s), {element_count} element(s)."
     )
     _emit(
         on_progress,
         "done",
-        f"{len(notebook.pages)} topic group"
-        f"{'' if len(notebook.pages) == 1 else 's'}, {element_count} elements",
-        total_steps,
-        total_steps,
+        f"{len(doc.pages)} topic page(s), {element_count} handwritten elements",
+        5,
+        5,
     )
-
-    return notebook
+    return doc

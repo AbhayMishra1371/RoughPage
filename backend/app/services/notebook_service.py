@@ -262,7 +262,7 @@ def notebook_from_source(
     except Exception as e:  # noqa: BLE001 — reported, not handled
         raise AiUnavailable(
             f"The AI client could not be initialised: {e}. "
-            "Check that NVIDIA_API_KEY is set in the repo-root .env."
+            "Check that NVIDIA_API_KEY or GEMINI_API_KEY is set in the repo-root .env."
         ) from e
 
     try:
@@ -294,4 +294,4 @@ def ai_configured() -> bool:
     # The AI service module owns the dotenv load and is imported lazily, so
     # /health would otherwise report an unconfigured key that is in fact set.
     load_dotenv()
-    return bool(os.getenv("NVIDIA_API_KEY"))
+    return bool(os.getenv("NVIDIA_API_KEY") or os.getenv("GEMINI_API_KEY"))
