@@ -85,24 +85,62 @@ class _PdfJob:
         try:
             doc_dict = json.loads(self.document_json)
             result = await export_pdf(doc_dict)
-            await storage.upload_pdf(self.object_key, result.pdf)
 
-            updates: dict[str, Any] = {"pdf_object_key": self.object_key}
-            if result.pages:
-                updates["page_count"] = result.pages
+            # Validate physical page count returned by the PDF export result contract
+            valid_pages: int | None = None
+            if isinstance(result.pages, int) and result.pages > 0:
+                valid_pages = result.pages
+            else:
+                logger.warning(
+                    "PDF export for %s returned missing or invalid physical page count: %s",
+                    self.notebook_id,
+                    result.pages,
+                )
 
-            await supabase_db.update_notebook(
-                self.notebook_id,
-                updates,
-                user_token=self.user_token,
-                use_service_role=True,
-            )
+            # Upload PDF to storage (resilient against storage errors so page_count can still update)
+            uploaded_key: str | None = None
+            try:
+                await storage.upload_pdf(self.object_key, result.pdf)
+                uploaded_key = self.object_key
+            except storage.StorageUnavailable as e:
+                logger.error("Storage upload failed for %s: %s", self.notebook_id, e)
+            except Exception as e:
+                logger.error("Unexpected storage upload error for %s: %s", self.notebook_id, e)
 
-            logger.info("Auto-saved PDF for notebook %s.", self.notebook_id)
+            updates: dict[str, Any] = {}
+            if uploaded_key:
+                updates["pdf_object_key"] = uploaded_key
+            if valid_pages is not None:
+                updates["page_count"] = valid_pages
+
+            if updates:
+                try:
+                    await supabase_db.update_notebook(
+                        self.notebook_id,
+                        updates,
+                        user_token=self.user_token,
+                        use_service_role=True,
+                    )
+                    logger.info(
+                        "Auto-saved PDF/physical page count (%s pages) for notebook %s.",
+                        valid_pages,
+                        self.notebook_id,
+                    )
+                except supabase_db.SupabaseDbError as e:
+                    logger.error(
+                        "Failed to update notebook record for %s in Supabase: %s",
+                        self.notebook_id,
+                        e,
+                    )
+                except Exception as e:
+                    logger.error(
+                        "Unexpected error updating notebook %s in DB: %s",
+                        self.notebook_id,
+                        e,
+                    )
+
         except ExportError as e:
             logger.error("PDF render failed for %s: %s", self.notebook_id, e.detail)
-        except storage.StorageUnavailable as e:
-            logger.error("Storage upload failed for %s: %s", self.notebook_id, e)
         except Exception as e:
             logger.error("Error in PDF job for %s: %s", self.notebook_id, e)
 
@@ -115,15 +153,32 @@ async def _ensure_pdf(row: dict[str, Any], user_token: str | None = None) -> Pdf
         doc_raw = row["document_json"]
         doc_dict = json.loads(doc_raw) if isinstance(doc_raw, str) else doc_raw
         result = await export_pdf(doc_dict)
+
+        valid_pages = (
+            result.pages
+            if isinstance(result.pages, int) and result.pages > 0
+            else None
+        )
+        if not valid_pages:
+            logger.warning(
+                "On-demand PDF export for %s returned missing or invalid physical page count: %s",
+                row["id"],
+                result.pages,
+            )
+
         key = f"{row['owner_id']}/{row['id']}.pdf"
         await storage.upload_pdf(key, result.pdf)
 
         updates: dict[str, Any] = {"pdf_object_key": key}
-        if result.pages:
-            updates["page_count"] = result.pages
+        if valid_pages is not None:
+            updates["page_count"] = valid_pages
 
-        await supabase_db.update_notebook(row["id"], updates, user_token=user_token)
+        await supabase_db.update_notebook(
+            row["id"], updates, user_token=user_token, use_service_role=True
+        )
         row["pdf_object_key"] = key
+        if valid_pages is not None:
+            row["page_count"] = valid_pages
 
     url = await storage.signed_pdf_url(key, PDF_URL_TTL_S)
     return PdfUrlResponse(url=url, expires_in=PDF_URL_TTL_S)

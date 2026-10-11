@@ -723,7 +723,7 @@ def _generate_single_notebook(
                 title=title,
             )
 
-            logger.info(f"Single-call succeeded — assembled {len(doc.pages)} page(s).")
+            logger.info(f"Single-call succeeded — assembled {len(doc.pages)} topic section(s).")
             return doc
 
         except json.JSONDecodeError as e:
@@ -795,7 +795,7 @@ def _plan_notebook_from_knowledge(
                 title=title,
             )
 
-            logger.info(f"Notebook Planner succeeded — assembled {len(doc.pages)} page(s).")
+            logger.info(f"Notebook Planner succeeded — assembled {len(doc.pages)} topic section(s).")
             return doc
 
         except json.JSONDecodeError as e:
@@ -946,7 +946,7 @@ def generate_notebook(
                     _emit(
                         on_progress,
                         "planning",
-                        f"Planned and structured {page_count} notebook page(s)",
+                        f"Planned and structured {page_count} topic section(s)",
                         5,
                         5,
                     )
@@ -971,12 +971,12 @@ def generate_notebook(
 
     element_count = sum(len(p.elements) for p in doc.pages)
     logger.info(
-        f"[generate_notebook] Finished successfully — {len(doc.pages)} page(s), {element_count} element(s)."
+        f"[generate_notebook] Finished successfully — {len(doc.pages)} topic section(s), {element_count} element(s)."
     )
     _emit(
         on_progress,
         "done",
-        f"{len(doc.pages)} topic page(s), {element_count} handwritten elements",
+        f"{len(doc.pages)} topic section(s), {element_count} handwritten elements",
         5,
         5,
     )

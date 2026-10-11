@@ -225,7 +225,9 @@ export default function LibraryGrid() {
                       • Lecture concepts structured into definitions & key points\n• Important formulas highlighted in sticky notes\n• High-resolution vector PDF ready
                     </p>
                     <div className="absolute bottom-2 right-2 bg-white px-2 py-0.5 border border-slate-300 text-[10px] font-sans font-bold text-teal-800 shadow-xs">
-                      {nb.page_count} {nb.page_count === 1 ? "page" : "pages"}
+                      {nb.pdf_ready
+                        ? `${nb.page_count} ${nb.page_count === 1 ? "page" : "pages"}`
+                        : "Paginating..."}
                     </div>
                   </div>
                 </Link>

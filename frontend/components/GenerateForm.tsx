@@ -395,7 +395,10 @@ export default function GenerateForm() {
               Notebook Ready & Filed!
             </h3>
             <p className="font-hand text-lg text-slate-800">
-              "{phase.notebook.title}" · {phase.notebook.page_count} page{phase.notebook.page_count === 1 ? "" : "s"}
+              "{phase.notebook.title}" ·{" "}
+              {phase.notebook.pdf_ready
+                ? `${phase.notebook.page_count} page${phase.notebook.page_count === 1 ? "" : "s"}`
+                : `${phase.notebook.page_count} topic section${phase.notebook.page_count === 1 ? "" : "s"} (paginating...)`}
             </p>
 
             <div className="pt-2 flex flex-wrap items-center justify-center gap-4">

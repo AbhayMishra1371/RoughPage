@@ -544,7 +544,7 @@ def planner_node(state: PipelineState) -> dict[str, Any]:
                 title=title,
             )
 
-            logger.info(f"[planner_node] Successfully assembled {len(doc.pages)} notebook page(s).")
+            logger.info(f"[planner_node] Successfully assembled {len(doc.pages)} topic section(s).")
             return {"notebook_document": doc}
 
         except Exception as e:
