@@ -61,11 +61,12 @@ function Event({
             x={SPINE_X}
             dotY={DOT_Y}
             last={last}
+            markerType={index % 2 === 1 ? 'diamond' : 'circle'}
           />
         )}
       </div>
 
-      <div style={{ flex: 1, minWidth: 0 }}>
+      <div style={{ flex: 1, minWidth: 0, paddingLeft: 4 }}>
         {label && (
           <div
             style={{
@@ -75,7 +76,18 @@ function Event({
               color: '#141f52',
             }}
           >
-            <Hand text={label} seed={`${seed}-lab${index}`} importance="medium" intensity={0.8} />
+            <span
+              style={{
+                display: 'inline-block',
+                backgroundColor: 'rgba(255, 243, 199, 0.75)',
+                padding: '0 8px',
+                borderRadius: 4,
+                border: '1px dashed #e0c65a',
+                lineHeight: `${LINE_H - 6}px`,
+              }}
+            >
+              <Hand text={label} seed={`${seed}-lab${index}`} importance="medium" intensity={0.8} />
+            </span>
           </div>
         )}
         {description && (

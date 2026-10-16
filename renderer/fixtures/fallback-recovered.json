@@ -1,0 +1,86 @@
+{
+  "metadata": {
+    "title": "Distributed Database Systems",
+    "subject": "Computer Science",
+    "source_url": null,
+    "video_id": null,
+    "style": "detailed",
+    "total_pages": 1,
+    "created_at": "2026-10-16T16:23:06.132012+00:00"
+  },
+  "pages": [
+    {
+      "page_number": 1,
+      "topic": "Welcome Back Class",
+      "elements": [
+        {
+          "importance": "high",
+          "type": "heading",
+          "text": "Welcome Back Class",
+          "level": 1
+        },
+        {
+          "importance": "medium",
+          "type": "heading",
+          "text": "Welcome Back Class",
+          "level": 2
+        },
+        {
+          "importance": "low",
+          "type": "paragraph",
+          "text": "Welcome back class. Today we are examining Distributed Database Systems and Consensus Algorithms. First, let us establish what a distributed database actually is."
+        },
+        {
+          "importance": "medium",
+          "type": "heading",
+          "text": "Notice The Quorum Requirement Formula",
+          "level": 2
+        },
+        {
+          "importance": "low",
+          "type": "paragraph",
+          "text": "Notice the quorum requirement formula: majority = floor(n / 2) + 1. For a 5-node cluster, consensus requires at least 3 active nodes. In summary, Raft decomposes consensus into leader election, log replication, and safety constraints."
+        },
+        {
+          "importance": "high",
+          "type": "definition",
+          "term": "A Distributed Database",
+          "meaning": "a system of multiple interconnected databases stored across physically distinct computing nodes",
+          "example": null
+        },
+        {
+          "importance": "high",
+          "type": "sticky_formula",
+          "label": "Formula / Complexity",
+          "formula": "majority = floor(n / 2) + 1",
+          "is_latex": false
+        },
+        {
+          "importance": "low",
+          "type": "bullet_list",
+          "title": "Welcome Back Class Points",
+          "items": [
+            "First, let us establish what a distributed database actually is.",
+            "Second step: If an election timeout elapses without a heartbeat, the node becomes a Candidate.",
+            "Third step: The candidate requests votes from all peer nodes in the cluster.",
+            "Fourth step: If the candidate receives votes from a majority of nodes, it transitions to the Leader state.",
+            "Fifth step: The leader begins serving client writes and broadcasting append entries RPCs."
+          ]
+        },
+        {
+          "importance": "high",
+          "type": "important_note",
+          "text": "important note: in any real-world distributed network, network partitions are inevitable, which means architects must choose between consistency and availability."
+        },
+        {
+          "importance": "medium",
+          "type": "summary",
+          "points": [
+            "Welcome Back Class",
+            "Notice The Quorum Requirement Formula"
+          ]
+        }
+      ]
+    }
+  ]
+}

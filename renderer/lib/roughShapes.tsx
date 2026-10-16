@@ -551,16 +551,145 @@ export function RoughDownArrow({
         const tip = h - 3;
         const opts: RoughOptions = {
           stroke,
-          strokeWidth: 1.5,
-          roughness: 1.5,
-          bowing: 2.2,
+          strokeWidth: 1.8,
+          roughness: 1.3,
+          bowing: 1.2,
           seed,
         };
-        return [
-          rc.line(x, top, x + 0.8, tip, opts),
-          rc.line(x - 4.5, tip - 6, x + 0.8, tip, { ...opts, seed: seed + 3 }),
-          rc.line(x + 5.5, tip - 6, x + 0.8, tip, { ...opts, seed: seed + 5 }),
+        const barbLen = 8;
+        const barbSpread = 0.45;
+        const a = Math.PI / 2; // pointing down
+        const pLeft: [number, number] = [
+          x - barbLen * Math.cos(a - barbSpread),
+          tip - barbLen * Math.sin(a - barbSpread),
         ];
+        const pRight: [number, number] = [
+          x - barbLen * Math.cos(a + barbSpread),
+          tip - barbLen * Math.sin(a + barbSpread),
+        ];
+        return [
+          // Arrow shaft with slight double strike for hand-drawn weight
+          rc.line(x, top, x + 0.3, tip, opts),
+          rc.line(x - 0.2, top + 2, x + 0.2, tip - 1, { ...opts, strokeWidth: 1.1, seed: seed + 1 }),
+          // Solid sketched triangular arrowhead
+          rc.polygon([[x, tip], pLeft, pRight], {
+            stroke,
+            strokeWidth: 1.6,
+            fill: stroke,
+            fillStyle: 'solid',
+            roughness: 1.2,
+            seed: seed + 3,
+          }),
+        ];
+      }}
+    />
+  );
+}
+
+/**
+ * A hand-drawn capsule/stadium shape (for Start/End nodes, terminal steps, or category pills).
+ */
+export function RoughCapsuleBox({
+  width,
+  height,
+  seed,
+  stroke = INK,
+  strokeWidth = 1.6,
+  fill,
+  fillStyle = 'solid',
+}: {
+  width: number;
+  height: number;
+  seed: number;
+  stroke?: string;
+  strokeWidth?: number;
+  fill?: string;
+  fillStyle?: string;
+}) {
+  return (
+    <RoughOverlay
+      width={width}
+      height={height}
+      deps={[seed, stroke, strokeWidth, fill, fillStyle]}
+      draw={(rc, w, h) => {
+        const r = Math.min(h / 2 - 2, 22);
+        const x0 = 2;
+        const y0 = 2;
+        const x1 = w - 2;
+        const y1 = h - 2;
+        const opts: RoughOptions = {
+          stroke,
+          strokeWidth,
+          roughness: 1.3,
+          bowing: 1.2,
+          seed,
+          fill,
+          fillStyle,
+        };
+        const points: [number, number][] = [
+          [x0 + r, y0],
+          [x1 - r, y0],
+          [x1 - r * 0.3, y0 + r * 0.3],
+          [x1, y0 + r],
+          [x1, y1 - r],
+          [x1 - r * 0.3, y1 - r * 0.3],
+          [x1 - r, y1],
+          [x0 + r, y1],
+          [x0 + r * 0.3, y1 - r * 0.3],
+          [x0, y1 - r],
+          [x0, y0 + r],
+          [x0 + r * 0.3, y0 + r * 0.3],
+        ];
+        return [rc.polygon(points, opts)];
+      }}
+    />
+  );
+}
+
+/**
+ * A hand-drawn diamond shape (for decision steps and branching nodes).
+ */
+export function RoughDiamondBox({
+  width,
+  height,
+  seed,
+  stroke = INK,
+  strokeWidth = 1.6,
+  fill,
+  fillStyle = 'solid',
+}: {
+  width: number;
+  height: number;
+  seed: number;
+  stroke?: string;
+  strokeWidth?: number;
+  fill?: string;
+  fillStyle?: string;
+}) {
+  return (
+    <RoughOverlay
+      width={width}
+      height={height}
+      deps={[seed, stroke, strokeWidth, fill, fillStyle]}
+      draw={(rc, w, h) => {
+        const cx = w / 2;
+        const cy = h / 2;
+        const opts: RoughOptions = {
+          stroke,
+          strokeWidth,
+          roughness: 1.35,
+          bowing: 1.2,
+          seed,
+          fill,
+          fillStyle,
+        };
+        const points: [number, number][] = [
+          [cx, 3],
+          [w - 3, cy],
+          [cx, h - 3],
+          [3, cy],
+        ];
+        return [rc.polygon(points, opts)];
       }}
     />
   );
@@ -584,6 +713,7 @@ export function RoughTableRow({
   top = false,
   stroke = INK,
   strokeWidth = 1.4,
+  headerFill,
 }: {
   width: number;
   height: number;
@@ -594,12 +724,13 @@ export function RoughTableRow({
   top?: boolean;
   stroke?: string;
   strokeWidth?: number;
+  headerFill?: string;
 }) {
   return (
     <RoughOverlay
       width={width}
       height={height}
-      deps={[seed, divX, top, stroke, strokeWidth]}
+      deps={[seed, divX, top, stroke, strokeWidth, headerFill]}
       draw={(rc, w, h) => {
         const opts: RoughOptions = {
           stroke,
@@ -608,7 +739,20 @@ export function RoughTableRow({
           bowing: 1.2,
           seed,
         };
-        const nodes = [
+        const nodes: SVGGElement[] = [];
+
+        if (top && headerFill) {
+          nodes.push(
+            rc.rectangle(2, 2, w - 4, h - 4, {
+              stroke: 'transparent',
+              fill: headerFill,
+              fillStyle: 'solid',
+              seed: seed + 99,
+            }),
+          );
+        }
+
+        nodes.push(
           // Left and right edges, drawn slightly past the corners: a hand-ruled
           // table overshoots its junctions, and that overshoot is most of what
           // makes it read as drawn rather than as a <table>.
@@ -616,9 +760,10 @@ export function RoughTableRow({
           rc.line(w - 2, -1, w - 2.7, h + 1, { ...opts, seed: seed + 11 }),
           rc.line(divX, 0, divX + 0.9, h, { ...opts, seed: seed + 17 }),
           rc.line(1, h - 1, w - 1, h - 0.4, { ...opts, seed: seed + 23 }),
-        ];
+        );
         if (top) {
           nodes.push(rc.line(1, 1, w - 1, 1.6, { ...opts, seed: seed + 29 }));
+          nodes.push(rc.line(2, h - 3, w - 2, h - 2.5, { ...opts, strokeWidth: 1.1, seed: seed + 31 }));
         }
         return nodes;
       }}
@@ -642,6 +787,7 @@ export function RoughSpineSegment({
   dotY,
   last = false,
   stroke = INK,
+  markerType = 'circle',
 }: {
   width: number;
   height: number;
@@ -653,12 +799,13 @@ export function RoughSpineSegment({
   /** The last event stops the spine at its own node instead of running on. */
   last?: boolean;
   stroke?: string;
+  markerType?: 'circle' | 'diamond' | 'pin';
 }) {
   return (
     <RoughOverlay
       width={width}
       height={height}
-      deps={[seed, x, dotY, last, stroke]}
+      deps={[seed, x, dotY, last, stroke, markerType]}
       draw={(rc, _w, h) => {
         const opts: RoughOptions = {
           stroke,
@@ -668,21 +815,52 @@ export function RoughSpineSegment({
           seed,
         };
         // Overrun the top by 1px so consecutive segments overlap rather than
-        // leaving a hairline gap at every join.
+          // leaving a hairline gap at every join.
         const end = last ? dotY : h + 1;
-        return [
+        const nodes: SVGGElement[] = [
           rc.line(x, -1, x + 0.7, end, opts),
-          // A ring, not a filled dot: a hollow circle is what a pen actually
-          // draws, and it stays legible at 8px where a blob just smudges.
-          rc.circle(x + 0.4, dotY, 8, {
-            ...opts,
-            seed: seed + 13,
-            strokeWidth: 1.7,
-            roughness: 1.1,
-            fill: PAPER,
-            fillStyle: 'solid',
-          }),
         ];
+
+        if (markerType === 'diamond') {
+          nodes.push(
+            rc.polygon(
+              [
+                [x + 0.4, dotY - 6],
+                [x + 6, dotY],
+                [x + 0.4, dotY + 6],
+                [x - 5.2, dotY],
+              ],
+              {
+                ...opts,
+                seed: seed + 13,
+                strokeWidth: 1.7,
+                fill: '#fff6cf',
+                fillStyle: 'solid',
+              },
+            ),
+          );
+        } else {
+          // Ring with filled center
+          nodes.push(
+            rc.circle(x + 0.4, dotY, 9, {
+              ...opts,
+              seed: seed + 13,
+              strokeWidth: 1.8,
+              roughness: 1.1,
+              fill: PAPER,
+              fillStyle: 'solid',
+            }),
+            rc.circle(x + 0.4, dotY, 4, {
+              ...opts,
+              seed: seed + 17,
+              strokeWidth: 1.2,
+              fill: stroke,
+              fillStyle: 'solid',
+            }),
+          );
+        }
+
+        return nodes;
       }}
     />
   );
@@ -696,9 +874,11 @@ export interface GraphNodeShape {
   y: number;
   w: number;
   h: number;
-  /** Ellipses for mind-map spokes, boxes for diagram nodes. */
-  shape: 'box' | 'ellipse';
+  /** Shapes: box, ellipse, capsule, diamond, cylinder, process */
+  shape: 'box' | 'ellipse' | 'capsule' | 'diamond' | 'cylinder' | 'process';
   emphasis?: boolean;
+  fill?: string;
+  stroke?: string;
 }
 
 /** An edge, already resolved to absolute overlay coordinates. */
@@ -707,9 +887,11 @@ export interface GraphEdgeShape {
   y1: number;
   x2: number;
   y2: number;
-  /** Curved spokes for mind maps, straight arrows for diagrams. */
+  /** Curved spokes for mind maps, straight/bezier arrows for diagrams. */
   curve?: boolean;
   arrow?: boolean;
+  stroke?: string;
+  dashed?: boolean;
 }
 
 /**
@@ -745,91 +927,217 @@ export function RoughGraph({
       draw={(rc) => {
         const out: SVGGElement[] = [];
 
-        // Edges first, so node outlines sit on top and the joins look tucked in
-        // rather than crossing over the boxes.
+        // 1. Draw Edges first, so node outlines sit cleanly on top
         edges.forEach((e, i) => {
           const s = seed + i * 7 + 1;
+          const edgeStroke = e.stroke ?? stroke;
           const opts: RoughOptions = {
-            stroke,
-            strokeWidth: 1.4,
-            roughness: 1.6,
-            bowing: 2,
+            stroke: edgeStroke,
+            strokeWidth: 1.5,
+            roughness: 1.4,
+            bowing: 1.4,
             seed: s,
+            strokeLineDash: e.dashed ? [6, 4] : undefined,
           };
+
+          let arrivalAngle = Math.atan2(e.y2 - e.y1, e.x2 - e.x1);
+
           if (e.curve) {
-            // A single control point pulled off the straight line — enough of a
-            // sag to read as drawn by hand, not enough to look like a noodle.
+            // Natural sag or curve
             const mx = (e.x1 + e.x2) / 2;
             const my = (e.y1 + e.y2) / 2;
             const dx = e.x2 - e.x1;
             const dy = e.y2 - e.y1;
             const len = Math.hypot(dx, dy) || 1;
-            const bulge = Math.min(16, len * 0.14);
-            out.push(
-              rc.curve(
-                [
-                  [e.x1, e.y1],
-                  [mx - (dy / len) * bulge, my + (dx / len) * bulge],
-                  [e.x2, e.y2],
-                ],
-                opts,
-              ),
-            );
+            const bulge = Math.min(18, len * 0.16);
+
+            const cpx = mx - (dy / len) * bulge;
+            const cpy = my + (dx / len) * bulge;
+
+            out.push(rc.curve([[e.x1, e.y1], [cpx, cpy], [e.x2, e.y2]], opts));
+
+            // Tangent at arrival is from control point (cpx, cpy) to destination (e.x2, e.y2)
+            arrivalAngle = Math.atan2(e.y2 - cpy, e.x2 - cpx);
           } else {
             out.push(rc.line(e.x1, e.y1, e.x2, e.y2, opts));
           }
 
           if (e.arrow) {
-            const a = Math.atan2(e.y2 - e.y1, e.x2 - e.x1);
-            const len = 7;
-            const spread = 0.45;
+            // Draw authentic solid hand-drawn arrowhead triangle
+            const tipLen = 8;
+            const spread = 0.44;
+            const pLeft: [number, number] = [
+              e.x2 - tipLen * Math.cos(arrivalAngle - spread),
+              e.y2 - tipLen * Math.sin(arrivalAngle - spread),
+            ];
+            const pRight: [number, number] = [
+              e.x2 - tipLen * Math.cos(arrivalAngle + spread),
+              e.y2 - tipLen * Math.sin(arrivalAngle + spread),
+            ];
+
             out.push(
-              rc.line(
-                e.x2 - len * Math.cos(a - spread),
-                e.y2 - len * Math.sin(a - spread),
-                e.x2,
-                e.y2,
-                { ...opts, seed: s + 3 },
-              ),
-              rc.line(
-                e.x2 - len * Math.cos(a + spread),
-                e.y2 - len * Math.sin(a + spread),
-                e.x2,
-                e.y2,
-                { ...opts, seed: s + 5 },
-              ),
+              rc.polygon([[e.x2, e.y2], pLeft, pRight], {
+                stroke: edgeStroke,
+                strokeWidth: 1.5,
+                fill: edgeStroke,
+                fillStyle: 'solid',
+                roughness: 1.2,
+                seed: s + 3,
+              }),
             );
           }
         });
 
+        // 2. Draw Nodes
         nodes.forEach((n, i) => {
           const s = seed + i * 13 + 101;
+          const nodeStroke = n.stroke ?? (n.emphasis ? accent : stroke);
+          const nodeFill = n.fill ?? (n.emphasis ? '#fff9d6' : '#ffffff');
           const opts: RoughOptions = {
-            stroke: n.emphasis ? accent : stroke,
-            strokeWidth: n.emphasis ? 1.9 : 1.4,
-            roughness: 1.35,
-            bowing: 1.4,
+            stroke: nodeStroke,
+            strokeWidth: n.emphasis ? 2.0 : 1.5,
+            roughness: 1.3,
+            bowing: 1.2,
             seed: s,
+            fill: nodeFill,
+            fillStyle: 'solid',
           };
+
           if (n.shape === 'ellipse') {
             out.push(rc.ellipse(n.x + n.w / 2, n.y + n.h / 2, n.w, n.h, opts));
-          } else {
+          } else if (n.shape === 'capsule') {
+            // Stadium / pill shape
+            const r = Math.min(n.h / 2 - 2, 20);
+            const x0 = n.x + 2;
+            const y0 = n.y + 2;
+            const x1 = n.x + n.w - 2;
+            const y1 = n.y + n.h - 2;
+            const pts: [number, number][] = [
+              [x0 + r, y0],
+              [x1 - r, y0],
+              [x1 - r * 0.3, y0 + r * 0.3],
+              [x1, y0 + r],
+              [x1, y1 - r],
+              [x1 - r * 0.3, y1 - r * 0.3],
+              [x1 - r, y1],
+              [x0 + r, y1],
+              [x0 + r * 0.3, y1 - r * 0.3],
+              [x0, y1 - r],
+              [x0, y0 + r],
+              [x0 + r * 0.3, y0 + r * 0.3],
+            ];
+            out.push(rc.polygon(pts, opts));
+          } else if (n.shape === 'diamond') {
+            const cx = n.x + n.w / 2;
+            const cy = n.y + n.h / 2;
+            out.push(
+              rc.polygon(
+                [
+                  [cx, n.y + 2],
+                  [n.x + n.w - 2, cy],
+                  [cx, n.y + n.h - 2],
+                  [n.x + 2, cy],
+                ],
+                opts,
+              ),
+            );
+          } else if (n.shape === 'cylinder') {
+            // Database cylinder: top ellipse, sides, bottom curve
+            const cyTop = n.y + 10;
+            const rx = n.w / 2 - 2;
+            const ry = 7;
+            const cx = n.x + n.w / 2;
+            // Background fill rect
+            out.push(
+              rc.rectangle(n.x + 2, cyTop, n.w - 4, n.h - 16, {
+                stroke: 'transparent',
+                fill: nodeFill,
+                fillStyle: 'solid',
+                seed: s + 1,
+              }),
+            );
+            // Side lines
+            out.push(rc.line(n.x + 2, cyTop, n.x + 2, n.y + n.h - ry, opts));
+            out.push(rc.line(n.x + n.w - 2, cyTop, n.x + n.w - 2, n.y + n.h - ry, opts));
+            // Top ellipse
+            out.push(rc.ellipse(cx, cyTop, rx * 2, ry * 2, opts));
+            // Bottom arc
+            out.push(rc.arc(cx, n.y + n.h - ry, rx * 2, ry * 2, 0, Math.PI, false, opts));
+          } else if (n.shape === 'process') {
+            // Process box: rounded rect with subtle pencil drop-shadow on bottom-right
+            out.push(
+              rc.rectangle(n.x + 3.5, n.y + 3.5, n.w - 4, n.h - 4, {
+                stroke: '#cbd5e1',
+                strokeWidth: 1.2,
+                roughness: 1.4,
+                seed: s + 5,
+              }),
+            );
             out.push(rc.rectangle(n.x, n.y, n.w, n.h, opts));
+          } else {
+            // Standard rounded box
+            const r = Math.min(6, Math.min(n.w, n.h) / 3);
+            const x0 = n.x + 2;
+            const y0 = n.y + 2;
+            const x1 = n.x + n.w - 2;
+            const y1 = n.y + n.h - 2;
+            out.push(
+              rc.polygon(
+                [
+                  [x0 + r, y0],
+                  [x1 - r, y0],
+                  [x1, y0 + r],
+                  [x1, y1 - r],
+                  [x1 - r, y1],
+                  [x0 + r, y1],
+                  [x0, y1 - r],
+                  [x0, y0 + r],
+                ],
+                opts,
+              ),
+            );
           }
+
           if (n.emphasis) {
-            // The hub gets retraced, the same way a student thickens the thing
-            // everything else hangs off.
+            // Emphasized nodes get retraced
             const inner: RoughOptions = {
               ...opts,
               seed: s + 7,
               strokeWidth: 1.1,
-              roughness: 2,
+              roughness: 1.8,
+              fill: undefined,
             };
-            out.push(
-              n.shape === 'ellipse'
-                ? rc.ellipse(n.x + n.w / 2, n.y + n.h / 2, n.w - 5, n.h - 5, inner)
-                : rc.rectangle(n.x + 2.5, n.y + 2.5, n.w - 5, n.h - 5, inner),
-            );
+            if (n.shape === 'ellipse') {
+              out.push(rc.ellipse(n.x + n.w / 2, n.y + n.h / 2, n.w - 5, n.h - 5, inner));
+            } else if (n.shape === 'capsule') {
+              // Retrace capsule
+              const r = Math.min((n.h - 4) / 2 - 2, 18);
+              const x0 = n.x + 4.5;
+              const y0 = n.y + 4.5;
+              const x1 = n.x + n.w - 4.5;
+              const y1 = n.y + n.h - 4.5;
+              out.push(
+                rc.polygon(
+                  [
+                    [x0 + r, y0],
+                    [x1 - r, y0],
+                    [x1 - r * 0.3, y0 + r * 0.3],
+                    [x1, y0 + r],
+                    [x1, y1 - r],
+                    [x1 - r * 0.3, y1 - r * 0.3],
+                    [x1 - r, y1],
+                    [x0 + r, y1],
+                    [x0 + r * 0.3, y1 - r * 0.3],
+                    [x0, y1 - r],
+                    [x0, y0 + r],
+                    [x0 + r * 0.3, y0 + r * 0.3],
+                  ],
+                  inner,
+                ),
+              );
+            } else {
+              out.push(rc.rectangle(n.x + 2.5, n.y + 2.5, n.w - 5, n.h - 5, inner));
+            }
           }
         });
 

@@ -442,6 +442,12 @@ async function main(): Promise<void> {
     );
     await writeFile(args.output, pdf);
 
+    const paperHandles = await page.$$('.paper');
+    const outBase = args.output.replace(/\.pdf$/i, '');
+    for (let pi = 0; pi < paperHandles.length; pi++) {
+      await paperHandles[pi].screenshot({ path: `${outBase}_page_${pi + 1}.png` });
+    }
+
     const pdfPages = countPdfPages(pdf);
     const fonts = fontReport(pdf);
     const declared = (doc.metadata as { total_pages?: number } | undefined)?.total_pages;
