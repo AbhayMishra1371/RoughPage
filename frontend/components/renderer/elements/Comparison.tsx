@@ -24,6 +24,7 @@ import { RoughTableRow } from '@/lib/roughShapes';
 import { useBoxSize } from '@/lib/useBoxSize';
 import type { ComparisonElement, Importance } from '@/lib/types';
 import { importanceOf } from '@/lib/types';
+import { VsBadgeDoodle } from '@/lib/handDrawnDoodles';
 import ContdMarker from './ContdMarker';
 
 const TABLE_W = CONTENT_W;
@@ -105,7 +106,21 @@ function Row({
           divX={DIV_X}
           top={header}
           strokeWidth={header ? 1.7 : 1.3}
+          headerFill={header ? '#f0f5fc' : undefined}
         />
+      )}
+      {header && (
+        <div
+          style={{
+            position: 'absolute',
+            left: DIV_X - 16,
+            top: -10,
+            zIndex: 3,
+            pointerEvents: 'none',
+          }}
+        >
+          <VsBadgeDoodle size={30} />
+        </div>
       )}
       <Cell text={left} seed={`${seed}-${key}-l`} width={DIV_X} importance={importance} header={header} />
       <Cell text={right} seed={`${seed}-${key}-r`} importance={importance} header={header} />

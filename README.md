@@ -47,47 +47,56 @@ Traditional AI summarizers spit out dry, generic bullet points. RoughPage extrac
 
 Here is what RoughPage generates from technical transcripts and college lectures:
 
-### 1. Conceptual Breakdown & Hand-Drawn Flowcharts
-Structured definitions in dashed boxes, natural hand-drawn flowcharts with directional arrows, and clear visual hierarchy.
+### 1. System Architectures & Distributed Pipelines
+Hand-drawn node-and-arrow diagrams with database cylinders, server nodes, dashed boundary cutouts, and clear dataflow direction.
 
 <p align="center">
-  <img src="docs/sample_pages/test_page_1.png" alt="Page 1: Encoder-Decoder Models & Flowchart" width="700" />
+  <img src="docs/out/visual-showcase_page_1.png" alt="Page 1: Distributed Pipeline Architecture" width="700" />
 </p>
 
 ---
 
-### 2. Sticky Formulas & Key Summaries
-Mathematical formulas highlighted on textured post-it notes alongside concise key takeaways.
+### 2. Definitions, Sticky Formulas & Organic Mind Maps
+Dashed definition cards, mathematical formulas highlighted on textured post-it notes with washi-tape doodles, and central-hub concept mind maps.
 
 <p align="center">
-  <img src="docs/sample_pages/test_page_2.png" alt="Page 2: Sticky Formula and Key Takeaways" width="700" />
+  <img src="docs/out/visual-showcase_page_2.png" alt="Page 2: Definitions, Sticky Formulas & Mind Maps" width="700" />
 </p>
 
 ---
 
-### 3. Comparison Tables & Formatted Code
-Side-by-side conceptual comparison matrices sketched with pencil-like borders, followed by syntax-highlighted code implementations.
+### 3. Enhanced Flowcharts & Comparison Matrices
+Procedural flowcharts featuring start/end capsules with watercolor washes, circled step numbers (①, ②, ③), decision diamonds, and hand-sketched comparison tables with "VS" badges.
 
 <p align="center">
-  <img src="docs/sample_pages/test_page_3.png" alt="Page 3: Comparison Tables & Code Implementation" width="700" />
+  <img src="docs/out/visual-showcase_page_3.png" alt="Page 3: Enhanced Flowcharts & Comparison Tables" width="700" />
 </p>
 
 ---
 
-### 4. Important Callout Boxes & Warnings
-Double-bordered red star notes for critical exam warnings and architectural traps.
+### 4. Important Callout Notes & Mathematical Function Graphs
+Double-bordered urgent red notes with star doodles, coupled with coordinate axes and hand-drawn mathematical curves.
 
 <p align="center">
-  <img src="docs/sample_pages/test_page_4.png" alt="Page 4: Callouts, Examples & Notes" width="700" />
+  <img src="docs/out/visual-showcase_page_4.png" alt="Page 4: Callouts, Summaries & Function Graphs" width="700" />
 </p>
 
 ---
 
-### 5. Historical Timelines & Concept Mind Maps
-Milestone sequence trees with pin markers, paired with circular radiating mind maps.
+### 5. Statistical Bar Charts, LaTeX Notes & Pie Charts
+Hand-sketched statistical bar charts with cross-hatching, LaTeX formula cards, and clean pastel-filled pie charts with legends.
 
 <p align="center">
-  <img src="docs/sample_pages/test_page_5.png" alt="Page 5: Timelines and Mind Maps" width="700" />
+  <img src="docs/out/visual-showcase_page_5.png" alt="Page 5: Statistical Bar Charts, Formulas & Pie Charts" width="700" />
+</p>
+
+---
+
+### 6. Geometric Proofs & Milestone Timelines
+Hand-drawn geometric proofs with angle markers alongside chronological event timelines with alternating circle and diamond pin markers.
+
+<p align="center">
+  <img src="docs/out/visual-showcase_page_6.png" alt="Page 6: Geometric Proofs & Evolution Timelines" width="700" />
 </p>
 
 ---

@@ -23,6 +23,7 @@ import { Hand } from '@/lib/handwriting';
 import { BOX_INSET, EL_GAP } from '@/lib/geometry';
 import { between, rngFrom, seedFrom } from '@/lib/rng';
 import { RoughSticky } from '@/lib/roughShapes';
+import { TapeStripDoodle } from '@/lib/handDrawnDoodles';
 import { useBoxSize, useLayoutBox } from '@/lib/useBoxSize';
 import type { StickyFormulaElement } from '@/lib/types';
 
@@ -112,7 +113,21 @@ export default function StickyFormula({
             }}
           >
             {box.w > 0 && box.h > 0 && (
-              <RoughSticky width={box.w} height={box.h} seed={seedFrom(seed, 'note')} />
+              <>
+                <RoughSticky width={box.w} height={box.h} seed={seedFrom(seed, 'note')} />
+                <div
+                  style={{
+                    position: 'absolute',
+                    top: -8,
+                    left: '50%',
+                    transform: 'translateX(-50%) rotate(-1deg)',
+                    zIndex: 3,
+                    pointerEvents: 'none',
+                  }}
+                >
+                  <TapeStripDoodle width={68} height={16} />
+                </div>
+              </>
             )}
 
             <div style={{ position: 'relative', zIndex: 1 }}>

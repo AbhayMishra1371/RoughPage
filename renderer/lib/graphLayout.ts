@@ -276,11 +276,11 @@ export function layoutDiagram(
 
 // ── Mind map: an organic central hub with colored branch groups ─────────────
 
-const M_SIDE_W = 224;
-const M_GUTTER = 24;
+const M_SIDE_W = 232;
+const M_GUTTER = 20;
 const M_BRANCH_H = 38;
-const M_SUB_H = 24;
-const M_BLOCK_GAP = 16;
+const M_SUB_H = 28;
+const M_BLOCK_GAP = 20;
 const M_HUB_H = 62;
 
 export function layoutMindMap(

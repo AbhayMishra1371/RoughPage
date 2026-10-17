@@ -27,7 +27,10 @@
       "@/lib/roughShapes": ["./lib/renderer/roughShapes"],
       "@/lib/handwriting": ["./lib/renderer/handwriting"],
       "@/lib/graphLayout": ["./lib/renderer/graphLayout"],
-      "@/lib/useBoxSize": ["./lib/renderer/useBoxSize"]
+      "@/lib/useBoxSize": ["./lib/renderer/useBoxSize"],
+      "@/lib/handDrawnDoodles": ["./lib/renderer/handDrawnDoodles"],
+      "@/lib/handDrawnStyle": ["./lib/renderer/handDrawnStyle"],
+      "@/lib/sketchCharts": ["./lib/renderer/sketchCharts"]
     }
   },
   "include": [

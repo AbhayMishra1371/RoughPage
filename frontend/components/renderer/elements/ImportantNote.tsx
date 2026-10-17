@@ -31,6 +31,8 @@ export default function ImportantNote({
         style={{
           position: 'relative',
           padding: `${BOX_INSET}px 16px ${BOX_INSET}px 14px`,
+          backgroundColor: 'rgba(253, 238, 237, 0.45)',
+          borderRadius: 2,
         }}
       >
         {box.w > 0 && box.h > 0 && (

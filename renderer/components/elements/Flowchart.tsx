@@ -69,7 +69,7 @@ function FlowStep({
         style={{
           position: 'relative',
           width: STEP_W,
-          padding: `${BOX_INSET}px 18px`,
+          padding: isDecision ? `${BOX_INSET + 2}px 52px` : `${BOX_INSET}px 18px`,
         }}
       >
         {box.w > 0 && box.h > 0 && (
