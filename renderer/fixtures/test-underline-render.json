@@ -1,0 +1,42 @@
+{
+  "metadata": {
+    "title": "Java Multithreading",
+    "subject": "Computer Science",
+    "source_url": null,
+    "video_id": null,
+    "style": "detailed",
+    "total_pages": 1,
+    "created_at": "2026-10-17T19:50:00.000Z"
+  },
+  "pages": [
+    {
+      "page_number": 1,
+      "topic": "Threads and Runnables",
+      "elements": [
+        {
+          "importance": "high",
+          "type": "heading",
+          "text": "Threads and Runnables",
+          "level": 1
+        },
+        {
+          "importance": "high",
+          "type": "bullet_list",
+          "title": "Advantages of Implementing Runnable over Extending Thread",
+          "items": [
+            "Allows separation of concerns by defining a task instead of inheriting Thread behavior.",
+            "Java does not support multiple class inheritance, so implementing Runnable leaves room to extend another class.",
+            "Enables reuse across thread pools and ExecutorService."
+          ]
+        },
+        {
+          "importance": "high",
+          "type": "definition",
+          "term": "Runnable Interface",
+          "meaning": "A functional interface designed to provide a common protocol for objects that wish to execute code while they are active.",
+          "example": "Thread t = new Thread(new MyRunnable());"
+        }
+      ]
+    }
+  ]
+}

@@ -234,7 +234,7 @@ export function RoughSticky({
  * Anchoring to the box BOTTOM rather than its top is what makes a term that
  * wrapped to a second line get underlined under that line instead of the first.
  */
-const UNDERLINE_DROP = 9;
+const UNDERLINE_DROP = 8;
 
 /**
  * The red underline, in place.
@@ -278,11 +278,11 @@ export function RoughUnderline({
         height={height}
         deps={[seed, stroke]}
         draw={(rc, w) => [
-          rc.line(1, 4, w - 2, 5, {
+          rc.line(1, 4, w - 2, 4, {
             stroke,
             strokeWidth: 1.8,
-            roughness: 2.4,
-            bowing: 4,
+            roughness: 1.3,
+            bowing: 0,
             seed,
           }),
         ]}
